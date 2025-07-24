@@ -1,0 +1,89 @@
+.container {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  height: 100vh; /* Take the full screen height */
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.backBtn {
+  font-size: 20px;
+  color: #3498db;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 24px;
+  align-self: flex-start;
+  transition: transform 0.2s ease;
+}
+
+.backBtn:hover {
+  transform: translateX(-4px);
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 0;
+  padding: 0 24px 16px;
+}
+
+.userDetails {
+  background-color: white;
+  flex-grow: 1;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 18px;
+  text-transform: capitalize;
+}
+
+.value {
+  font-size: 18px;
+  color: #2c3e50;
+  max-width: 60%;
+  text-align: right;
+  word-break: break-word;
+}
+
+.approveBtn {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.7rem 1.4rem;
+  border: none;
+  margin-bottom: 24px;
+  align-self: center;
+  width: fit-content;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.approveBtn:hover {
+  background-color: #45a049;
+}

@@ -1,0 +1,133 @@
+.container {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  width: 100vw;
+  height: 100vh;
+}
+
+.title {
+  font-size: 40px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.table th,
+.table td {
+  padding: 20px 24px;
+  font-size: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.table th {
+  background-color: #ecf0f1;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+}
+
+.row:hover {
+  background-color: #f2f6f8;
+}
+
+.badgeApproved {
+  display: inline-block;
+  background-color: #2ecc71;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.badgePending {
+  display: inline-block;
+  background-color: #f39c12;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.backArrow {
+  font-size: 32px;
+  cursor: pointer;
+  color: #3498db;
+  transition: transform 0.2s ease;
+}
+
+.backArrow:hover {
+  transform: translateX(-4px);
+}
+
+.pageTitle {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.sortableHeader {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.sortableHeader:hover {
+  color: #2980b9;
+}
+
+.arrow {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #3498db;
+}
+.searchInput {
+  margin-left: auto;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: #3498db;
+}
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}

@@ -1,0 +1,26 @@
+.formField {
+  min-width: 100%;
+  min-height: 5.5vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  padding-left: 0.2rem;
+  display: flex;
+  align-content: flex-start;
+  font-size: 0.9rem;
+  font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+}
+
+.field {
+  border-radius: 8px;
+  border: rgba(0, 0, 0, 0.247) 1px solid;
+  padding: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.error {
+  border-color: red;
+}
