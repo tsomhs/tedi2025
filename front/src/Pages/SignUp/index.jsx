@@ -34,7 +34,7 @@ function SignUp() {
 
     const newErrors = {};
     for (const [key, value] of Object.entries(trimmedForm)) {
-      if (key === "id") continue; // <-- Ignore `id` field
+      if (key === "id" || key === "role" || key === "status") continue;
       if (!value) {
         newErrors[key] = true;
       }

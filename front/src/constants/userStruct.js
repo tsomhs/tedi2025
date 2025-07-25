@@ -1,5 +1,6 @@
 const UserStruct = {
   id: "",
+  role: "",
   username: "",
   firstName: "",
   lastName: "",
@@ -10,6 +11,7 @@ const UserStruct = {
   vatNumber: "",
   password: "",
   confirmedPassword: "",
+  status: "",
 };
 
 export default UserStruct;
