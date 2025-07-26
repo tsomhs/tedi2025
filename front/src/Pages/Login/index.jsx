@@ -43,8 +43,15 @@ function Login() {
     }
 
     console.log("Form submitted:", trimmedForm);
-    // navigate("/home"); //TODO Finish homepage implementation
-    navigate("/admin"); //TODO Finish admin page implementation
+
+    if (
+      trimmedForm.username === "admin" &&
+      trimmedForm.password === "password"
+    ) {
+      navigate("/admin");
+    } else {
+      navigate("/home");
+    }
   };
 
   const handleForgotPassword = () => {

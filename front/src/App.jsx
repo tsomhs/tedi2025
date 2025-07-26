@@ -3,7 +3,7 @@ import Login from "./Pages/Login/index.jsx";
 import SignUp from "./Pages/SignUp/index.jsx";
 import PendingApproval from "./Pages/PendingApproval/index.jsx";
 import Homepage from "./Pages/Homepage/index.jsx";
-import Admin from "./Pages/AdminPage/index.jsx";
+import Admin from "./Pages/Admin/index.jsx";
 import UserDetails from "./Pages/UserDetails/index.jsx";
 import MyAuctions from "./Pages/MyAuctions/index.jsx";
 import Browse from "./Pages/Browse/index.jsx";

@@ -6,6 +6,7 @@
 }
 
 .overlay {
+  position: relative;
   background-color: rgba(0, 0, 0, 0.6);
   padding: 3rem;
   border-radius: 1.5rem;
@@ -49,4 +50,18 @@
 
 .button:hover {
   background-color: #007f55;
+}
+
+.backArrow {
+  position: absolute; /* Add this */
+  top: 1rem; /* Adjust as needed */
+  left: 2rem;
+  font-size: 32px;
+  cursor: pointer;
+  color: #09ec8e;
+  transition: transform 0.2s ease;
+}
+
+.backArrow:hover {
+  transform: translateX(-4px);
 }

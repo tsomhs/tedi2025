@@ -6,9 +6,13 @@ function Homepage() {
   const navigate = useNavigate();
 
   return (
-    <div className={styles.hero}>
-      <div className={styles.overlay}>
+    <div className={styles.overlay}>
+      <span className={styles.backArrow} onClick={() => navigate("/")}>
+        ←
+      </span>
+      <div className={styles.header}>
         <h1 className={styles.title}>Welcome to Cash or Trash</h1>
+
         <p className={styles.subtitle}>
           Discover, bid, and win amazing items from people around the world.
         </p>

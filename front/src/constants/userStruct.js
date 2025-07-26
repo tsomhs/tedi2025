@@ -1,6 +1,6 @@
 const UserStruct = {
   id: "",
-  role: "",
+  role: "", //Add roles like 'admin', 'user', etc.
   username: "",
   firstName: "",
   lastName: "",
