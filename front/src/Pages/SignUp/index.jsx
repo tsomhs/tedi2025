@@ -3,14 +3,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import FormField from "../../Components/FormField/index.jsx";
 import { useNavigate } from "react-router-dom";
-import UserStruct from "../../constants/userStruct.js";
+import user from "../../constants/Structs.js";
 
 function SignUp() {
   const navigate = useNavigate();
 
   const [usernameExists, setUsernameExists] = useState(false);
 
-  const [form, setForm] = useState({ ...UserStruct });
+  const [form, setForm] = useState({ ...user });
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
