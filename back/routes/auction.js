@@ -5,22 +5,24 @@ const router = express.Router();
 const auctionController = require('../controllers/auctionController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
-// Δημιουργία νέας δημοπρασίας (μόνο για sellers)
-router.post('/', verifyToken, auctionController.createAuction);
-
-// Προβολή δημοπρασίας με ID (όλοι)
-router.get('/:id', auctionController.getAuctionById);
-
 // Αναζήτηση δημοπρασιών με φίλτρα
 router.get('/search', auctionController.searchAuctions); 
-
 // Επιστροφή ενεργών δημοπρασιών (με σελιδοποίηση)
 router.get('/active', auctionController.getActiveAuctions);
 
+// Route δοκιμής
+router.get('/', (req, res) => {
+  res.send('Η route /api/auction λειτουργεί σωστά');
+});
+
+// Προβολή δημοπρασίας με ID (όλοι)
+router.get('/:id', auctionController.getAuctionById);
+// Δημιουργία νέας δημοπρασίας (μόνο για sellers)
+router.post('/', verifyToken, auctionController.createAuction);
 // Επεξεργασία δημοπρασίας (μόνο ο πωλητής)
 router.put('/:id', verifyToken, auctionController.updateAuction);
-
 // Διαγραφή δημοπρασίας (μόνο ο πωλητής, πριν ξεκινήσει)
 router.delete('/:id', verifyToken, auctionController.deleteAuction);
+
 
 module.exports = router;

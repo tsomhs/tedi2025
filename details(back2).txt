@@ -58,3 +58,6 @@ server.js
 Δηλώνει τα middleware (cors, express.json)
 
 Δηλώνει τα routes (π.χ. /api/auth, /api/auction)
+
+τροπος εκτελεσης back:
+node server.js
