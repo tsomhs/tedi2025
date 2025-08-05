@@ -33,8 +33,8 @@ auth.js : Ορίζει τα endpoints /api/auth/register και /api/auth/login,
 auctionController.js : Περιέχει business logic για τις δημοπρασίες:
 createAuction() : εισάγει item + κατηγορίες,
 getAuctionById() : φέρνει item + seller + categories,
-updateAuction() : επιτρέπεται πριν ξεκινήσει & χωρίς bids,
-deleteAuction() : αν δεν ξεκίνησε & δεν υπάρχουν bids,
+updateAuction() : επιτρέπεται πριν ξεκινήσει & χωρίς προσφορές,
+deleteAuction() : αν δεν ξεκίνησε & δεν υπάρχουν προσφορές,
 searchAuctions() : αναζήτηση με query params (όνομα, περιγραφή, τιμές, location, κατηγορία)
 #####
 

@@ -9,21 +9,28 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tsomhs/tedi25.git"
+    "url": "git+https://github.com/tsomhs/tedi2025.git"
   },
-  "keywords": ["auction", "backend", "nodejs", "express", "mysql"],
+  "keywords": [
+    "auction",
+    "backend",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
   "author": "Χαράλαμπος Ραφαήλ Δημητρίου",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/tsomhs/tedi25/issues"
+    "url": "https://github.com/tsomhs/tedi2025/issues"
   },
-  "homepage": "https://github.com/tsomhs/tedi25#readme",
+  "homepage": "https://github.com/tsomhs/tedi2025#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.14.1"
+    "mysql2": "^3.14.1",
+    "xmlbuilder": "^15.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
