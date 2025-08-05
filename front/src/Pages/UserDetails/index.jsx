@@ -1,12 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "./UserDetails.module.css";
-import UserStruct from "../../constants/userStruct";
+import user from "../../constants/Structs.js";
 import { useState } from "react";
 
 function UserDetails() {
   const navigate = useNavigate();
   const { state } = useLocation(); // passed from Admin
-  const [user, setUser] = useState(state?.user || UserStruct);
+  const [user, setUser] = useState(state?.user || user);
 
   const handleApprove = () => {
     // Simulate approval (replace this with an API call later)
