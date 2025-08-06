@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "./UserDetails.module.css";
-import user from "../../constants/Structs.js";
 import { useState } from "react";
 
 function UserDetails() {

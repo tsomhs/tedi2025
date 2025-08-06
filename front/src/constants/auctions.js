@@ -5,6 +5,7 @@ const auctions = [
     categories: ["Clothing", "Infants", "Bottoms"],
     currently: "$7.50",
     firstBid: "$7.00",
+    buyPrice: "$30.00",
     numberOfBids: 2,
     bids: [
       {
@@ -46,6 +47,7 @@ const auctions = [
     categories: ["Electronics", "Smartphones"],
     currently: "$950.00",
     firstBid: "$900.00",
+    buyPrice: "$30.00",
     numberOfBids: 4,
     bids: [
       {
@@ -86,6 +88,7 @@ const auctions = [
     categories: ["Gaming", "Consoles"],
     currently: "$320.00",
     firstBid: "$299.99",
+    buyPrice: "$30.00",
     numberOfBids: 3,
     bids: [],
     location: "Chicago",
@@ -105,6 +108,7 @@ const auctions = [
     categories: ["Accessories", "Watches", "Luxury"],
     currently: "$5,200.00",
     firstBid: "$4,500.00",
+    buyPrice: "$30.00",
     numberOfBids: 7,
     bids: [],
     location: "London",
@@ -124,6 +128,7 @@ const auctions = [
     categories: ["Electronics", "Laptops"],
     currently: "$850.00",
     firstBid: "$800.00",
+    buyPrice: "$30.00",
     numberOfBids: 5,
     bids: [],
     location: "Berlin",
@@ -144,6 +149,7 @@ const auctions = [
     categories: ["Home", "Appliances", "Cleaning"],
     currently: "$320.00",
     firstBid: "$300.00",
+    buyPrice: "$30.00",
     numberOfBids: 3,
     bids: [],
     location: "Toronto",
@@ -164,6 +170,7 @@ const auctions = [
     categories: ["Clothing", "Footwear", "Men"],
     currently: "$75.00",
     firstBid: "$70.00",
+    buyPrice: "$30.00",
     numberOfBids: 2,
     bids: [],
     location: "Melbourne",
@@ -183,6 +190,7 @@ const auctions = [
     categories: ["Electronics", "Audio", "Headphones"],
     currently: "$270.00",
     firstBid: "$250.00",
+    buyPrice: "$30.00",
     numberOfBids: 6,
     bids: [],
     location: "Athens",

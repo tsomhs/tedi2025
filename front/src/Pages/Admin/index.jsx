@@ -1,11 +1,9 @@
 import { useState } from "react";
 import styles from "./Admin.module.css";
 import { useNavigate } from "react-router-dom";
-import user from "../../constants/Structs.js";
 
 const fakeUsers = [
   {
-    ...user,
     id: 1,
     username: "john_doe",
     email: "john@example.com",
@@ -18,7 +16,6 @@ const fakeUsers = [
     vatNumber: "US12345678",
   },
   {
-    ...user,
     id: 2,
     username: "jane_smith",
     email: "jane@example.com",
@@ -31,7 +28,6 @@ const fakeUsers = [
     vatNumber: "CA87654321",
   },
   {
-    ...user,
     id: 3,
     username: "alex_m",
     email: "alex@example.com",
@@ -44,7 +40,6 @@ const fakeUsers = [
     vatNumber: "UK34567890",
   },
   {
-    ...user,
     id: 4,
     username: "sara_k",
     email: "sara@example.com",
@@ -57,7 +52,6 @@ const fakeUsers = [
     vatNumber: "DE45678901",
   },
   {
-    ...user,
     id: 5,
     username: "michael_b",
     email: "michael@example.com",
@@ -70,7 +64,6 @@ const fakeUsers = [
     vatNumber: "AU56789012",
   },
   {
-    ...user,
     id: 6,
     username: "linda_w",
     email: "linda@example.com",
@@ -83,7 +76,6 @@ const fakeUsers = [
     vatNumber: "US67890123",
   },
   {
-    ...user,
     id: 7,
     username: "tom_h",
     email: "tom@example.com",
@@ -96,7 +88,6 @@ const fakeUsers = [
     vatNumber: "CA78901234",
   },
   {
-    ...user,
     id: 8,
     username: "nina_r",
     email: "nina@example.com",
@@ -109,7 +100,6 @@ const fakeUsers = [
     vatNumber: "ES89012345",
   },
   {
-    ...user,
     id: 9,
     username: "george_c",
     email: "george@example.com",
@@ -122,7 +112,6 @@ const fakeUsers = [
     vatNumber: "FR90123456",
   },
   {
-    ...user,
     id: 10,
     username: "emma_t",
     email: "emma@example.com",
@@ -135,7 +124,6 @@ const fakeUsers = [
     vatNumber: "IT01234567",
   },
   {
-    ...user,
     id: 11,
     username: "david_g",
     email: "david@example.com",
@@ -148,7 +136,6 @@ const fakeUsers = [
     vatNumber: "IE11223344",
   },
   {
-    ...user,
     id: 12,
     username: "olivia_m",
     email: "olivia@example.com",
@@ -161,7 +148,6 @@ const fakeUsers = [
     vatNumber: "PT22334455",
   },
   {
-    ...user,
     id: 13,
     username: "ethan_b",
     email: "ethan@example.com",
