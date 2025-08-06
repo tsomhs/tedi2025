@@ -1,89 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./MyAuctions.module.css";
-
-const mockAuctions = [
-  {
-    id: "1675506221",
-    name: "Tommy Hilfiger jeans boy's 18-24 M",
-    categories: ["Clothing", "Infants"],
-    currently: "$7.50",
-    firstBid: "$7.00",
-    numberOfBids: 2,
-    started: "Dec-08-01 22:45:26",
-    ends: "Dec-15-01 22:45:26",
-    status: "Pending", // future use
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-  {
-    id: "1675506222",
-    name: "iPhone 13 Pro Max 256GB",
-    categories: ["Electronics", "Smartphones"],
-    currently: "$950.00",
-    firstBid: "$900.00",
-    numberOfBids: 12,
-    started: "Jul-20-25 10:00:00",
-    ends: "Jul-27-25 10:00:00",
-    status: "Active",
-  },
-];
+import auctionData from "../../constants/auctions";
 
 function MyAuctions() {
-  const [auctions, setAuctions] = useState(mockAuctions);
+  const [auctions, setAuctions] = useState([]);
 
+  useEffect(() => {
+    // Simulate fetching data
+    setAuctions(auctionData);
+  }, []);
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>My Auctions</h1>
@@ -114,12 +39,48 @@ function MyAuctions() {
             <p>
               <strong>Status:</strong> {item.status}
             </p>
+            <p>
+              <strong>Location:</strong> {item.location}
+            </p>
+            <p>
+              <strong>Country:</strong> {item.country}
+            </p>
+            <p>
+              <strong>Seller:</strong> {item.seller.userID} (Rating:{" "}
+              {item.seller.rating})
+            </p>
+            <p>
+              <strong>Description:</strong> {item.description}
+            </p>
 
             <div className={styles.cardActions}>
-              <button className={styles.edit}>Edit</button>
-              <button className={styles.delete}>Delete</button>
-              <button className={styles.start}>Start</button>
+              {item.status === "Pending" && (
+                <>
+                  {item.bids.length === 0 && (
+                    <>
+                      <button className={styles.edit}>Edit</button>
+                      <button className={styles.delete}>Delete</button>
+                    </>
+                  )}
+                  <button className={styles.start}>Start</button>
+                </>
+              )}
             </div>
+
+            {/* Optional: Show bids */}
+            {item.bids?.length > 0 && (
+              <div className={styles.bids}>
+                <h3>Bids</h3>
+                <ul>
+                  {item.bids.map((bid, idx) => (
+                    <li key={idx}>
+                      {bid.amount} by {bid.bidder.userID} at {bid.time} from{" "}
+                      {bid.bidder.country}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         ))}
       </div>
