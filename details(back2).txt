@@ -1,0 +1,63 @@
+config/
+  Περιέχει ρυθμίσεις σύνδεσης με τη βάση δεδομένων.
+
+db.js: σύνδεση με τη MySQL (mysql2).
+
+controllers/
+  Περιέχει τη λογική (handlers) για κάθε λειτουργία του API.
+Κάθε αρχείο εδώ χειρίζεται τις πράξεις για ένα θέμα:
+
+auctionController.js: Δημιουργία, εμφάνιση, διαγραφή δημοπρασιών.
+
+authController.js: Εγγραφή, login, έλεγχος ρόλου χρήστη.
+
+bidController.js: Υποβολή και εμφάνιση προσφορών (bids).
+
+exportController.js: Εξαγωγή δεδομένων σε JSON/XML (μόνο για admin).
+
+historyController.js: Ιστορικό συναλλαγών ή bids ανά χρήστη.
+
+messageController.js: Αποστολή/λήψη μηνυμάτων μεταξύ χρηστών.
+
+ratingController.js: Αξιολόγηση χρηστών (π.χ. μετά από συναλλαγή).
+
+middleware/
+  Περιέχει ενδιάμεσες λειτουργίες που ελέγχουν αιτήματα.
+
+authMiddleware.js: Ελέγχει αν ο χρήστης είναι αυθεντικοποιημένος και αν είναι admin ή όχι.
+
+routes/
+  Περιέχει τα endpoints του API (τα URLs που βλέπει το frontend).
+Κάθε αρχείο αντιστοιχεί σε ομάδα endpoints:
+
+auction.js: /api/auction → routes για δημοπρασίες.
+
+auth.js: /api/auth → routes για login/register.
+
+bids.js: /api/bids → routes για προσφορές.
+
+export.js: /api/export → εξαγωγή σε JSON/XML.
+
+history.js: /api/history → ιστορικό χρήστη.
+
+messages.js: /api/messages → αποστολή/λήψη μηνυμάτων.
+
+ratings.js: /api/ratings → routes για αξιολογήσεις χρηστών.
+
+package.json
+Περιέχει τα dependencies και scripts του backend (π.χ. Express, MySQL).
+
+schema.sql
+Το schema της βάσης (πίνακες, foreign keys, αρχικοί χρήστες κ.λπ.).
+
+server.js
+Το βασικό αρχείο του server:
+
+Στήνει Express
+
+Δηλώνει τα middleware (cors, express.json)
+
+Δηλώνει τα routes (π.χ. /api/auth, /api/auction)
+
+τροπος εκτελεσης back:
+node server.js
