@@ -1,70 +1,74 @@
-.hero {
-  height: 100vh;
+/* Use a calm gradient background */
+.container {
+  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+  padding: 2rem;
+  position: relative;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.backArrow {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  font-size: 3.2rem;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.backArrow:hover {
+  color: #00a86b;
+  transform: translateX(-3px);
 }
 
 .header {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Centers child blocks horizontally */
+  max-width: 600px;
+  text-align: center;
 }
 
 .title {
-  text-decoration-line: underline;
-  text-decoration-color: #08ad71;
-  text-decoration-thickness: 4px;
-  text-underline-offset: 0.2em;
-  text-align: center;
-  font-size: 4.5rem;
-  font-weight: bold;
-  margin-bottom: 3rem;
+  font-weight: 700;
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
   color: #022912;
+  /* subtle bottom border as accent instead of underline */
+  border-bottom: 3px solid #00a86b;
+  display: inline-block;
+  padding-bottom: 0.2rem;
 }
 
 .subtitle {
-  width: 65%;
-  text-align: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  color: #ffffff;
   margin-bottom: 2.5rem;
-  color: #ddd;
 }
 
 .buttonGroup {
   display: flex;
-  gap: 1.5rem;
   justify-content: center;
+  gap: 1.5rem;
   flex-wrap: wrap;
 }
 
 .button {
   background-color: #00a86b;
   border: none;
-  padding: 1.6rem 2.8rem;
+  padding: 1rem 2.5rem;
   font-size: 1rem;
-  font-weight: bold;
+  font-weight: 600;
   color: white;
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 2px 6px rgba(12, 187, 123, 0.4);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .button:hover {
   background-color: #007f55;
-}
-
-.backArrow {
-  position: absolute; /* Add this */
-  top: 1rem; /* Adjust as needed */
-  left: 2rem;
-  font-size: 52px;
-  line-height: 2;
-  cursor: pointer;
-  color: #000000;
-  transition: transform 0.2s ease;
-}
-
-.backArrow:hover {
-  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 127, 85, 0.6);
 }

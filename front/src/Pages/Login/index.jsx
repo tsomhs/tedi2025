@@ -3,14 +3,20 @@ import { Link } from "react-router-dom";
 import styles from "./Login.module.css";
 import FormField from "../../Components/FormField/index.jsx";
 import { useNavigate } from "react-router-dom";
+import { LoginApi } from "../../axios/auth.jsx";
 function Login() {
   const navigate = useNavigate();
+
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     username: "",
     password: "",
   });
-  const [errors, setErrors] = useState({});
+
   const handleChange = (e) => {
+    if (errors.username || errors.password) {
+      setErrors({});
+    }
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -18,7 +24,7 @@ function Login() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Use trimmedForm directly
@@ -37,26 +43,32 @@ function Login() {
 
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) {
-      console.error("Form has errors");
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) return;
 
-    console.log("Form submitted:", trimmedForm);
+    const { code, role } = await LoginApi(form.username, form.password);
 
-    if (
-      trimmedForm.username === "admin" &&
-      trimmedForm.password === "password"
-    ) {
-      navigate("/admin");
+    if (code === 0) {
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/home");
+      }
     } else {
-      navigate("/home");
+      if (code === 1 || code === 2) {
+        setErrors({ username: true, password: true });
+      } else if (code === 3) {
+        setForm({ username: "", password: "" });
+        alert("User not approved by admin.");
+      } else {
+        setForm({ username: "", password: "" });
+        alert("Unknown error occurred.");
+      }
     }
   };
 
-  const handleForgotPassword = () => {
-    console.log("Forgot Password clicked");
-  };
+  //   const handleForgotPassword = () => {
+  //     console.log("Forgot Password clicked");
+  //   };
 
   return (
     <>
@@ -82,14 +94,20 @@ function Login() {
             error={errors.password}
           />
 
-          {(errors.username || errors.password) && (
-            <span className={styles.errorText}>Wrong credentials.</span>
-          )}
+          <span
+            className={styles.errorText}
+            style={{
+              visibility:
+                errors.username || errors.password ? "visible" : "hidden",
+            }}
+          >
+            Wrong credentials.
+          </span>
 
           <button className={styles.button}>SIGN IN</button>
         </form>
 
-        <div className={styles.orText}>OR</div>
+        {/* <div className={styles.orText}>OR</div>
 
         <button
           className={styles.forgotPassword}
@@ -97,7 +115,7 @@ function Login() {
         >
           {" "}
           Forgot Password?
-        </button>
+        </button> */}
 
         <div className={styles.signUpText}>
           Don't have an account?&nbsp;
