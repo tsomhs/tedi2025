@@ -19,7 +19,7 @@ exports.register = (req, res) => {
     if (err) throw err;
 
     if (results.length > 0) {
-      return res.status(400).json({ msg: 'Username already exists' });
+      return res.status(420).json({ msg: 'Username already exists' });
     }
 
     // Αν ΟΚ, κρυπτογράφηση κωδικού
