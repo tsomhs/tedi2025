@@ -11,11 +11,14 @@ function Homepage() {
         ←
       </span>
       <div className={styles.header}>
-        <h1 className={styles.title}>Welcome to Cash or Trash</h1>
+        <h1 className={styles.title}>&nbsp;Cash or Trash &nbsp;</h1>
 
-        <p className={styles.subtitle}>
-          Discover, bid, and win amazing items from people around the world.
-        </p>
+        <h1 className={styles.subtitle}>
+          Discover, bid, and win amazing items from people around the world —
+          from rare collectibles and vintage treasures to cutting-edge gadgets
+          and unique handmade creations, every auction is a chance to find
+          something extraordinary.
+        </h1>
         <div className={styles.buttonGroup}>
           <button className={styles.button} onClick={() => navigate("/browse")}>
             🔍 Browse Auctions

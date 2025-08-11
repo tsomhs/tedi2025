@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import FormField from "../../Components/FormField/index.jsx";
 import { useNavigate } from "react-router-dom";
+import { RegisterApi } from "../../axios/auth.jsx";
 
 function SignUp() {
   const navigate = useNavigate();
 
   const [usernameExists, setUsernameExists] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     id: "",
     role: "",
@@ -24,9 +26,11 @@ function SignUp() {
     confirmedPassword: "",
     status: "",
   });
-  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
+    if (Object.keys(errors).length > 0) {
+      setErrors({});
+    }
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -34,7 +38,7 @@ function SignUp() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setUsernameExists(false);
 
@@ -46,7 +50,7 @@ function SignUp() {
     setForm(trimmedForm);
 
     const newErrors = {};
-    for (const [key, value] of Object.entries(trimmedForm)) {
+    for (const [key, value] of Object.entries(form)) {
       if (key === "id" || key === "role" || key === "status") continue;
       if (!value) {
         newErrors[key] = true;
@@ -61,14 +65,27 @@ function SignUp() {
       return;
     }
 
-    //TODO Use API CALL to check existing username
-    if (form.username === "existingUser") {
-      setUsernameExists(true);
-      return;
-    }
+    setLoading(true);
 
-    console.log("Form submitted:", trimmedForm);
-    navigate("/pending-approval");
+    try {
+      const result = await RegisterApi(
+        form.username,
+        form.password,
+        form.email
+      );
+
+      if (result === 0) {
+        navigate("/pending-approval");
+      } else if (result === 1) {
+        setUsernameExists(true);
+      } else {
+        console.log("Registration failed");
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+    } finally {
+      setLoading(false); // <---- stop loading
+    }
   };
 
   return (
@@ -178,7 +195,9 @@ function SignUp() {
             )}
           </div>
 
-          <button className={styles.button}>SIGN UP</button>
+          <button className={styles.button} disabled={loading}>
+            {loading ? "Registering..." : "SIGN UP"}
+          </button>
         </form>
 
         <div className={styles.signInText}>

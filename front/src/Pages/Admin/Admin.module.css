@@ -80,16 +80,16 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
 }
-
 .backArrow {
-  font-size: 32px;
+  font-size: 3.2rem;
+  color: #0a0a0a;
   cursor: pointer;
-  color: #3498db;
-  transition: transform 0.2s ease;
+  transition: color 0.3s ease, transform 0.2s ease;
 }
 
 .backArrow:hover {
-  transform: translateX(-4px);
+  color: #05c735;
+  transform: translateX(-3px);
 }
 
 .pageTitle {
