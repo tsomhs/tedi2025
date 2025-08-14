@@ -6,6 +6,7 @@ import Homepage from "./Pages/Homepage/index.jsx";
 import Admin from "./Pages/Admin/index.jsx";
 import UserDetails from "./Pages/UserDetails/index.jsx";
 import MyAuctions from "./Pages/MyAuctions/index.jsx";
+import Auction from "./Pages/Auction/index.jsx";
 import Browse from "./Pages/Browse/index.jsx";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/user/:id" element={<UserDetails />} />
         <Route path="/my-auctions" element={<MyAuctions />} />
+        <Route path="/my-auctions/:id" element={<Auction />} />
         <Route path="/browse" element={<Browse />} />
       </Routes>
     </Router>

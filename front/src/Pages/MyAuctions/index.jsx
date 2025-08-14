@@ -3,6 +3,7 @@ import styles from "./MyAuctions.module.css";
 import { useNavigate } from "react-router-dom";
 import auctionData from "../../constants/auctions";
 import formatDate from "../../Utils/formatDate";
+import { CreateAuctionApi, getAllAuctions } from "../../axios/auth";
 
 function MyAuctions() {
   const navigate = useNavigate();
@@ -27,8 +28,34 @@ function MyAuctions() {
   const [notification, setNotification] = useState({ message: "", type: "" });
 
   useEffect(() => {
-    // Always load from static auction data
-    setAuctions(auctionData);
+    const fetchAuctions = async () => {
+      try {
+        const data = await getAllAuctions(1, 10);
+        const mappedAuctions = data.auctions.map((a) => ({
+          id: a.id,
+          name: a.name,
+          categories: a.categories || [],
+          firstBid: a.first_bid,
+          currently: a.currently || a.first_bid, // if backend doesn't provide
+          buyPrice: a.buy_price,
+          numberOfBids: a.number_of_bids || 0, // optional
+          starts: a.started,
+          ends: a.ends,
+          status: a.status || "Pending",
+          seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
+          bids: a.bids || [],
+          description: a.description || "",
+          location: a.location,
+          country: a.country,
+        }));
+        setAuctions(mappedAuctions);
+        console.log("Mapped auctions:", mappedAuctions);
+      } catch (err) {
+        setError("Failed to fetch auctions.");
+      }
+    };
+
+    fetchAuctions();
   }, []);
 
   const handleInputChange = (e) => {
@@ -87,6 +114,7 @@ function MyAuctions() {
 
   const handleCreateAuction = async () => {
     const { name, firstBid, buyPrice, starts, ends } = newAuction;
+
     if (!name || !firstBid || !buyPrice || !starts || !ends) {
       setShowModal(false);
       setNotification({
@@ -145,21 +173,8 @@ function MyAuctions() {
       ends: "",
     });
 
-    // await AddAuction(auction); // Placeholder
+    await CreateAuctionApi(auction);
   };
-
-  /*
-  // 🔧 Placeholder for backend integration later
-  async function AddAuction(auctionData) {
-    // Send POST request to backend API to create a new auction
-    // Example:
-    // await fetch("/api/auctions", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(auctionData),
-    // });
-  }
-  */
 
   const filteredAuctions = auctions.filter((a) => a.status === activeTab);
 
@@ -175,16 +190,6 @@ function MyAuctions() {
       >
         + New Auction
       </button>
-
-      {notification.message && (
-        <div
-          className={`${styles.notification} ${
-            notification.type === "error" ? styles.error : styles.success
-          }`}
-        >
-          {notification.message}
-        </div>
-      )}
 
       {showModal && !isEditing && (
         <div className={styles.modalOverlay}>
@@ -416,100 +421,121 @@ function MyAuctions() {
         </button>
       </div>
 
-      {/* Auctions List */}
+      {/* Auctions Table */}
       <div className={styles.auctionList}>
-        {filteredAuctions.map((item) => (
-          <AuctionCard
-            key={item.id}
-            item={item}
-            onEdit={() => {
-              setIsEditing(true);
-              setNewAuction({
-                ...item,
-                categories: item.categories.join(", "),
-              });
-            }}
-            onDelete={() => handleDeleteAuction(item.id)}
-            onStart={() => handleStartAuction(item.id)}
-          />
-        ))}
+        <div
+          className={`${styles.notification} ${
+            notification.type === "error" ? styles.error : styles.success
+          }`}
+          style={{
+            visibility: notification.message ? "visible" : "hidden",
+          }}
+        >
+          {
+            notification.message ||
+              "Auction updated successfully! " /* non-breaking space keeps height */
+          }
+        </div>
+
+        <AuctionTable
+          auctions={filteredAuctions || []} // ✅ now uses the filtered list
+          onEdit={(auction) => {
+            setIsEditing(true);
+            setNewAuction({
+              ...auction,
+              categories: auction.categories.join(", "),
+            });
+          }}
+          onDelete={(id) => handleDeleteAuction(id)}
+          onStart={(id) => handleStartAuction(id)}
+          onBids={() => navigate("/bids")}
+          onInfo={(id) => navigate(`/my-auctions/${id}`)}
+        />
       </div>
     </div>
   );
 }
 
-function AuctionCard({ item, onEdit, onDelete, onStart }) {
+function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
   return (
-    <div className={styles.card}>
-      <h2>{item.name}</h2>
-      <p>
-        <strong>Categories: </strong> &nbsp;{item.categories.join(", ")}
-      </p>
-      <p>
-        <strong>First Bid:</strong>&nbsp; {item.firstBid}
-      </p>
-      <p>
-        <strong>Current Price: </strong>&nbsp; {item.currently}
-      </p>
-      <p>
-        <strong>Buy Price: </strong>&nbsp; {item.buyPrice}
-      </p>
-      <p>
-        <strong>Bids: </strong>&nbsp; {item.numberOfBids}
-      </p>
-      <p>
-        <strong>Start: </strong> &nbsp;{formatDate(item.starts)}
-      </p>
-      <p>
-        <strong>End: </strong>&nbsp; {formatDate(item.ends)}
-      </p>
-      <p>
-        <strong>Location: </strong> &nbsp;{item.location}
-      </p>
-      <p>
-        <strong>Country: </strong> &nbsp;{item.country}
-      </p>
-      <p>
-        <strong>Seller: </strong>&nbsp; {item.seller.userID} (Rating:{" "}
-        {item.seller.rating})
-      </p>
-      <p>
-        <strong>Description: </strong> &nbsp;{item.description}
-      </p>
-      <div className={styles.cardActions}>
-        {item.status === "Pending" && (
-          <>
-            {item.bids.length === 0 && (
-              <>
-                <button className={styles.edit} onClick={onEdit}>
-                  Edit
-                </button>
-                <button className={styles.delete} onClick={onDelete}>
-                  Delete
-                </button>
-              </>
-            )}
-            <button className={styles.start} onClick={onStart}>
-              Start
-            </button>
-          </>
-        )}
-      </div>
-
-      {item.bids?.length > 0 && (
-        <div className={styles.bids}>
-          <h3>Bids</h3>
-          <ul>
-            {item.bids.map((bid, idx) => (
-              <li key={idx}>
-                {bid.amount} by {bid.bidder.userID} at {bid.time} from{" "}
-                {bid.bidder.country}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <table className={styles.auctionTable}>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Categories</th>
+          <th>First Bid</th>
+          <th>Current Price</th>
+          <th>Buy Price</th>
+          <th>Bids</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Location</th>
+          <th>Country</th>
+          <th>Seller</th>
+          <th>Description</th>
+          <th className={styles.actionsHeader}>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {auctions.map((item) => (
+          <tr key={item.id}>
+            <td>{item.name}</td>
+            <td>{item.categories.join(", ")}</td>
+            <td>{item.firstBid}</td>
+            <td>{item.currently}</td>
+            <td>{item.buyPrice}</td>
+            <td>{item.numberOfBids}</td>
+            <td>{formatDate(item.starts)}</td>
+            <td>{formatDate(item.ends)}</td>
+            <td>{item.location}</td>
+            <td>{item.country}</td>
+            <td>
+              {item.seller.userID} (Rating: {item.seller.rating})
+            </td>
+            <td>{item.description}</td>
+            <td className={styles.actions}>
+              <button className={styles.info} onClick={() => onInfo(item.id)}>
+                Info
+              </button>
+              {item.status === "Pending" && (
+                <>
+                  <button
+                    className={styles.start}
+                    onClick={() => onStart(item.id)}
+                  >
+                    Start
+                  </button>
+                  {item.bids.length === 0 && (
+                    <>
+                      <button
+                        className={styles.edit}
+                        onClick={() => onEdit(item)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className={styles.delete}
+                        onClick={() => onDelete(item.id)}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                  {item.bids.length > 0 && (
+                    <button
+                      className={styles.bids}
+                      onClick={() => onBids(item.id)}
+                    >
+                      Bids
+                    </button>
+                  )}
+                </>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
