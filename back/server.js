@@ -17,7 +17,10 @@ app.use("/api/auth", authRoutes);
 
 //διαχείριση δημοπρασιών (δημιουργία, εμφάνιση, λίστα)
 const auctionRoutes = require("./routes/auction");
-app.use("/api/auction", auctionRoutes);
+app.use("/api/auctions", auctionRoutes);
+
+const adminRoutes = require("./routes/admin");
+app.use("/api/admin", adminRoutes);
 
 //καταχώρηση και έλεγχος προσφορών σε δημοπρασίες
 const bidRoutes = require("./routes/bids");

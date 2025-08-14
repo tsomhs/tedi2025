@@ -59,11 +59,7 @@ exports.login = (req, res) => {
         return res.status(403).json({ msg: "User not approved by admin." });
       }
 
-      const token = jwt.sign(
-        { id: user.id, role: user.role },
-        "SECRET_KEY",
-        { expiresIn: "1h" }
-      );
+      const token = jwt.sign({ id: user.id, role: user.role }, "SECRET_KEY");
 
       res.json({ token });
     }
