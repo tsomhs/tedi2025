@@ -12,34 +12,57 @@ exports.createAuction = (req, res) => {
     return res.status(403).json({ msg: 'Only sellers can create auctions' });
   }
 
-  // Δημιουργία αντικειμένου (item)
-  const itemQuery = `
-    INSERT INTO items (name, first_bid, buy_price, location, country, started, ends, seller_id, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+// Δημιουργία αντικειμένου (item) — βάλε status=0 (pending)
+const itemQuery = `
+  INSERT INTO items (
+    name, first_bid, buy_price, location, country, started, ends, status, seller_id, description
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
-  db.query(
-    itemQuery,
-    [itemName, firstBid, buyPrice || null, location, country, started, ends, userId, description],
-    (err, result) => {
-      if (err) return res.status(500).json({ msg: 'DB error creating item', err });
+db.query(
+  itemQuery,
+  [
+    itemName,
+    firstBid,
+    buyPrice || null,
+    location,
+    country,
+    started,
+    ends,
+    0,           // <-- status = 0 (pending)
+    userId,
+    description
+  ],
+  (err, result) => {
+    if (err) return res.status(500).json({ msg: 'DB error creating item', err });
 
-      const itemId = result.insertId;
+    const itemId = result.insertId;
 
-      // Κατηγορίες
-      const catQueries = categories.map(cat =>
-        db.query('INSERT INTO item_categories (item_id, category_name) VALUES (?, ?)', [itemId, cat])
-      );
+    // Κατηγορίες (ασφαλής εισαγωγή, ακόμα κι αν δεν έχουν σταλεί)
+    const cats = Array.isArray(categories) ? categories : [];
 
-      Promise.all(catQueries)
-        .then(() => {
-          res.json({ msg: 'Auction created successfully', itemId });
-        })
-        .catch(err => {
-          res.status(500).json({ msg: 'Error assigning categories', err });
-        });
+    if (cats.length === 0) {
+      return res.json({ msg: 'Auction created successfully', itemId });
     }
-  );
-};
+
+    let remaining = cats.length;
+    cats.forEach(cat => {
+      db.query(
+        'INSERT INTO item_categories (item_id, category_name) VALUES (?, ?)',
+        [itemId, cat],
+        (e) => {
+          if (e) return res.status(500).json({ msg: 'Error assigning categories', err: e });
+          remaining -= 1;
+          if (remaining === 0) {
+            res.json({ msg: 'Auction created successfully', itemId });
+          }
+        }
+      );
+    });
+  }
+);
+}
 
 // Προβολή δημοπρασίας
 exports.getAuctionById = (req, res) => {

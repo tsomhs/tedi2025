@@ -8,9 +8,10 @@ exports.placeBid = (req, res) => {
   const itemId = req.params.itemId;
   const { amount } = req.body;
 
-  if (role !== 'bidder') {
-    return res.status(403).json({ msg: 'Only bidders can place bids' });
-  }
+if (req.user.role !== 'buyer') {
+  return res.status(403).json({ msg: 'Only buyers can place bids' });
+}
+
 
   // Παίρνουμε τα στοιχεία της δημοπρασίας
   const itemQuery = 'SELECT * FROM items WHERE id = ?';

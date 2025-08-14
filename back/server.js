@@ -35,6 +35,10 @@ app.use("/api/export", exportRoutes);
 const ratingRoutes = require("./routes/ratings");
 app.use("/api/ratings", ratingRoutes);
 
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
+
+
 //αποθήκευση ιστορικού και σύστημα προτάσεων
 const historyRoutes = require("./routes/history");
 app.use("/api/history", historyRoutes);
