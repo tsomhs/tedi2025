@@ -1,19 +1,26 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "./UserDetails.module.css";
 import { useState } from "react";
+import { setUserApproval } from "../../axios/auth.jsx";
 
 function UserDetails() {
   const navigate = useNavigate();
   const { state } = useLocation(); // passed from Admin
-  const [user, setUser] = useState(state?.user || user);
+  const [user, setUser] = useState(state?.user || {});
+  const [loading, setLoading] = useState(false);
 
-  const handleApprove = () => {
-    // Simulate approval (replace this with an API call later)
-    const updatedUser = { ...user, status: "Approved" };
-    setUser(updatedUser);
+  const handleApprove = async () => {
+    setLoading(true);
+    const result = await setUserApproval(user.id, 1); // approve user
+    setLoading(false);
 
-    // Optional: show confirmation or navigate back
-    alert(`User "${user.username}" approved!`);
+    if (result.success) {
+      setUser({ ...user, approved: 1, status: "Approved" });
+      alert(`User "${user.username}" approved!`);
+      navigate("/admin"); // go back to admin page
+    } else {
+      alert(`Failed to approve user: ${result.msg}`);
+    }
   };
 
   return (
@@ -34,9 +41,13 @@ function UserDetails() {
           ))}
       </div>
 
-      {user.status !== "Approved" && (
-        <button className={styles.approveBtn} onClick={handleApprove}>
-          Approve User
+      {user.approved !== 1 && (
+        <button
+          className={styles.approveBtn}
+          onClick={handleApprove}
+          disabled={loading}
+        >
+          {loading ? "Approving..." : "Approve User"}
         </button>
       )}
     </div>

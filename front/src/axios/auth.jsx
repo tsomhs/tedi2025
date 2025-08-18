@@ -1,11 +1,29 @@
 import axios from "axios";
 
-export async function RegisterApi(username, password, email) {
+export async function RegisterApi({
+  username,
+  password,
+  email,
+  first_name,
+  last_name,
+  phone_number,
+  country,
+  address,
+  vat_number,
+  role = "buyer", // default role
+}) {
   try {
     const result = await axios.post("http://localhost:5000/api/auth/register", {
       username,
       password,
       email,
+      first_name,
+      last_name,
+      phone_number,
+      country,
+      address,
+      vat_number,
+      role,
     });
 
     console.log("Response from RegisterApi:", result);
@@ -14,7 +32,6 @@ export async function RegisterApi(username, password, email) {
       return 0; // Success
     }
   } catch (err) {
-    // Axios error responses are in err.response
     if (err.response) {
       console.error(err.response.data);
       if (err.response.status === 420) {
@@ -87,7 +104,7 @@ export async function CreateAuctionApi(auctionData) {
     const token = localStorage.getItem("token"); // JWT stored after login
 
     const result = await axios.post(
-      "http://localhost:5000/api/auction",
+      "http://localhost:5000/api/auctions",
       {
         itemName: auctionData.name,
         categories: auctionData.categories,
@@ -123,7 +140,7 @@ export async function CreateAuctionApi(auctionData) {
 }
 
 // Get all auctions with optional pagination
-export const getAllAuctions = async (page = 1, limit = 10) => {
+export async function getAllAuctions(page = 1, limit = 10) {
   try {
     const response = await axios.get(
       "http://localhost:5000/api/auctions/active",
@@ -136,4 +153,42 @@ export const getAllAuctions = async (page = 1, limit = 10) => {
     console.error("Error fetching auctions:", err);
     throw err; // re-throw to handle in the component
   }
-};
+}
+
+export async function getAllUsers() {
+  try {
+    const result = await axios({
+      method: "get",
+      url: "http://localhost:5000/api/admin/users?approved",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Accept: "application/json",
+      },
+    });
+    return result.data;
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    return [];
+  }
+}
+
+export async function setUserApproval(userId, approved) {
+  const token = localStorage.getItem("token"); // Admin JWT
+  try {
+    const res = await axios.put(
+      `http://localhost:5000/api/admin/users/${userId}/approve`,
+      { approved }, // 0 = pending, 1 = approved
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return { success: true, msg: res.data.msg };
+  } catch (err) {
+    console.error("Error approving user:", err);
+    if (err.response) return { success: false, msg: err.response.data.msg };
+    return { success: false, msg: err.message };
+  }
+}

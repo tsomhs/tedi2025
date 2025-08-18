@@ -67,12 +67,32 @@ function SignUp() {
 
     setLoading(true);
 
+    console.log("Sending body to backend:", {
+      username: form.username,
+      password: form.password,
+      email: form.email,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      phone_number: form.phoneNumber,
+      country: form.country,
+      address: form.address,
+      vat_number: form.vatNumber,
+      role: form.role,
+    });
+
     try {
-      const result = await RegisterApi(
-        form.username,
-        form.password,
-        form.email
-      );
+      const result = await RegisterApi({
+        username: form.username,
+        password: form.password,
+        email: form.email,
+        first_name: form.firstName,
+        last_name: form.lastName,
+        phone_number: form.phoneNumber,
+        country: form.country,
+        address: form.address,
+        vat_number: form.vatNumber,
+        role: form.role || "buyer",
+      });
 
       if (result === 0) {
         navigate("/pending-approval");

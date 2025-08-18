@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import styles from "./MyAuctions.module.css";
 import { useNavigate } from "react-router-dom";
-import auctionData from "../../constants/auctions";
 import formatDate from "../../Utils/formatDate";
 import { CreateAuctionApi, getAllAuctions } from "../../axios/auth";
 
+// TODO To active kai to pending tha eprepe na ta ipologizoume analogws an to Date.now() einai anamesa sto auction starts kai ends
+
 function MyAuctions() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Active"); // "Active" or "Pending"
+  const [activeTab, setActiveTab] = useState(1); // "Active" or "Pending"
   const [auctions, setAuctions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -21,7 +22,7 @@ function MyAuctions() {
     description: "",
     location: "",
     country: "",
-    starts: "",
+    starts: new Date().toISOString().slice(0, 16), // default to now
     ends: "",
   });
 
@@ -41,7 +42,7 @@ function MyAuctions() {
           numberOfBids: a.number_of_bids || 0, // optional
           starts: a.started,
           ends: a.ends,
-          status: a.status || "Pending",
+          status: Number(a.status), // preserves 0 or 1 exactly as backend sends
           seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
           bids: a.bids || [],
           description: a.description || "",
@@ -49,7 +50,11 @@ function MyAuctions() {
           country: a.country,
         }));
         setAuctions(mappedAuctions);
-        console.log("Mapped auctions:", mappedAuctions);
+        console.log("All auctions:", mappedAuctions);
+        console.log(
+          "Filtered auctions:",
+          mappedAuctions.filter((a) => a.status === activeTab)
+        );
       } catch (err) {
         setError("Failed to fetch auctions.");
       }
@@ -74,7 +79,7 @@ function MyAuctions() {
               buyPrice: parseFloat(newAuction.buyPrice),
               numberOfBids: auction.numberOfBids || 0, // keep existing bids count
               bids: auction.bids || [], // keep existing bids
-              status: auction.status || "Pending",
+              status: auction.status || 0,
               seller: auction.seller || { userID: "you", rating: 0 },
             }
           : auction
@@ -102,7 +107,7 @@ function MyAuctions() {
   const handleStartAuction = (id) => {
     setAuctions((prev) =>
       prev.map((auction) =>
-        auction.id === id ? { ...auction, status: "Active" } : auction
+        auction.id === id ? { ...auction, status: 1 } : auction
       )
     );
     setNotification({
@@ -145,7 +150,7 @@ function MyAuctions() {
       numberOfBids: 0,
       starts: newAuction.starts || new Date().toISOString(),
       ends: newAuction.ends,
-      status: "Pending",
+      status: 0,
       seller: { userID: "you", rating: 0 },
       bids: [],
     };
@@ -404,18 +409,14 @@ function MyAuctions() {
       {/* Tabs */}
       <div className={styles.tabs}>
         <button
-          className={`${styles.tab} ${
-            activeTab === "Active" ? styles.activeTab : ""
-          }`}
-          onClick={() => setActiveTab("Active")}
+          className={`${styles.tab} ${activeTab === 1 ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab(1)}
         >
           Active
         </button>
         <button
-          className={`${styles.tab} ${
-            activeTab === "Pending" ? styles.activeTab : ""
-          }`}
-          onClick={() => setActiveTab("Pending")}
+          className={`${styles.tab} ${activeTab === 0 ? styles.activeTab : ""}`}
+          onClick={() => setActiveTab(0)}
         >
           Pending
         </button>
@@ -497,7 +498,7 @@ function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
               <button className={styles.info} onClick={() => onInfo(item.id)}>
                 Info
               </button>
-              {item.status === "Pending" && (
+              {item.status === 0 && (
                 <>
                   <button
                     className={styles.start}

@@ -1,4 +1,5 @@
 -- Χρήστες (admin, seller, bidder, visitor)
+
 CREATE TABLE users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -7,9 +8,15 @@ CREATE TABLE users (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     role ENUM('buyer', 'seller', 'admin') DEFAULT 'buyer',
+    approved BOOLEAN DEFAULT FALSE,
+    phone_number VARCHAR(20),
+    country VARCHAR(100),
+    address VARCHAR(255),
+    vat_number VARCHAR(20),
     rating DECIMAL(3,2) DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Αντικείμενα (δημοπρασίες)
 CREATE TABLE items (
