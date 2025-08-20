@@ -8,6 +8,7 @@ import UserDetails from "./Pages/UserDetails/index.jsx";
 import MyAuctions from "./Pages/MyAuctions/index.jsx";
 import Auction from "./Pages/Auction/index.jsx";
 import Browse from "./Pages/Browse/index.jsx";
+import UserRole from "./Pages/UserRole/index.jsx";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/home" element={<Homepage />} />
+        <Route path="/user-role" element={<UserRole />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin/user/:id" element={<UserDetails />} />
         <Route path="/my-auctions" element={<MyAuctions />} />

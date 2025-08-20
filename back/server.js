@@ -42,6 +42,9 @@ app.use("/api/ratings", ratingRoutes);
 const historyRoutes = require("./routes/history");
 app.use("/api/history", historyRoutes);
 
+const userRoutes = require("./routes/users");
+app.use("/api/users", userRoutes);
+
 // Εκκίνηση server
 const PORT = 5000;
 app.listen(PORT, () => {

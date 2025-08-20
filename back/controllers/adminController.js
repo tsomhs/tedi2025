@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// GET /api/admin/users?approved=0|1
+// GET /api/admin/users?approved
 exports.listUsers = (req, res) => {
   const sql = `SELECT id, username, email, role, approved, first_name, last_name,
                       phone_number, country, address, vat_number
@@ -26,6 +26,31 @@ exports.setUserApproval = (req, res) => {
       if (result.affectedRows === 0)
         return res.status(404).json({ msg: "User not found" });
       res.json({ msg: `User ${id} approval set to ${approved}` });
+    }
+  );
+};
+
+// PUT /api/admin/users/:id/role   body: { role: "buyer" | "seller" | "admin" }
+exports.setUserRole = (req, res) => {
+  const userId = req.user.id; // comes from JWT middleware
+  const { role } = req.body;
+
+  const allowedRoles = ["buyer", "seller", "visitor"];
+
+  if (!allowedRoles.includes(role)) {
+    return res
+      .status(400)
+      .json({ msg: `role must be one of: ${allowedRoles.join(", ")}` });
+  }
+
+  db.query(
+    "UPDATE users SET role = ? WHERE id = ?",
+    [role, userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ msg: "DB error", err });
+      if (result.affectedRows === 0)
+        return res.status(404).json({ msg: "User not found" });
+      res.json({ msg: `Your role has been changed to ${role}` });
     }
   );
 };

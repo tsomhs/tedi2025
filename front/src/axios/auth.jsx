@@ -99,59 +99,47 @@ export async function LoginApi(username, password) {
   }
 }
 
-export async function CreateAuctionApi(auctionData) {
+export async function createAuction(auctionData) {
+  const token = localStorage.getItem("token");
+  console.log(token);
+  if (!token || token === "undefined") {
+    console.error("No token found, user not authenticated");
+    return { success: false, msg: "User not authenticated" };
+  }
   try {
-    const token = localStorage.getItem("token"); // JWT stored after login
-
-    const result = await axios.post(
+    const res = await axios.post(
       "http://localhost:5000/api/auctions",
-      {
-        itemName: auctionData.name,
-        categories: auctionData.categories,
-        firstBid: parseFloat(auctionData.firstBid),
-        buyPrice: auctionData.buyPrice
-          ? parseFloat(auctionData.buyPrice)
-          : null,
-        location: auctionData.location,
-        country: auctionData.country,
-        started: auctionData.starts,
-        ends: auctionData.ends,
-        description: auctionData.description,
-      },
+      auctionData,
       {
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // required by verifyToken
         },
       }
     );
 
-    console.log("Auction created:", result.data);
-    return { code: 0, itemId: result.data.itemId }; // success
+    return { success: true, data: res.data };
   } catch (err) {
+    console.error("Error creating auction:", err);
+
     if (err.response) {
-      console.error("Backend error:", err.response.data);
-      if (err.response.status === 403) return { code: 1 }; // not a seller
-      return { code: 2 }; // other backend error
+      // Backend returned 4xx or 5xx
+      return { success: false, msg: err.response.data.msg };
     }
-    console.error("Network or unexpected error:", err.message);
-    return { code: 3 }; // network/unexpected
+
+    // Network or other error
+    return { success: false, msg: err.message };
   }
 }
-
 // Get all auctions with optional pagination
-export async function getAllAuctions(page = 1, limit = 10) {
+// axios/auth.js (or wherever you keep your API calls)
+export async function getAllAuctions() {
   try {
-    const response = await axios.get(
-      "http://localhost:5000/api/auctions/active",
-      {
-        params: { page, limit },
-      }
-    );
-    return response.data; // { auctions: [...], page, limit }
+    const res = await axios.get("http://localhost:5000/api/auctions/all");
+    return res.data; // expect { auctions: [...] }
   } catch (err) {
     console.error("Error fetching auctions:", err);
-    throw err; // re-throw to handle in the component
+    throw err;
   }
 }
 
@@ -189,6 +177,61 @@ export async function setUserApproval(userId, approved) {
   } catch (err) {
     console.error("Error approving user:", err);
     if (err.response) return { success: false, msg: err.response.data.msg };
+    return { success: false, msg: err.message };
+  }
+}
+export async function setUserRole(role) {
+  const token = localStorage.getItem("token");
+  try {
+    const res = await axios.put(
+      "http://localhost:5000/api/users/me/role",
+      { role },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // ✅ store the new token
+    if (res.data.token) {
+      localStorage.setItem("token", res.data.token);
+      console.log("New token stored:", res.data.token);
+    }
+
+    return { success: true, msg: res.data.msg, token: res.data.token };
+  } catch (err) {
+    console.error("Error setting own role:", err);
+    if (err.response) return { success: false, msg: err.response.data.msg };
+    return { success: false, msg: err.message };
+  }
+}
+// Delete an auction by ID
+export async function deleteAuction(id) {
+  const token = localStorage.getItem("token");
+  try {
+    const res = await axios.delete(`http://localhost:5000/api/auctions/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 200) {
+      return { success: true, msg: res.data.msg };
+    } else {
+      return {
+        success: false,
+        msg: res.data.msg || "Failed to delete auction",
+      };
+    }
+  } catch (err) {
+    console.error("Error deleting auction:", err);
+
+    if (err.response) {
+      return { success: false, msg: err.response.data.msg };
+    }
+
     return { success: false, msg: err.message };
   }
 }

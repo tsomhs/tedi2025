@@ -16,6 +16,9 @@ router.get("/", (req, res) => {
   res.send("Η route /api/auctions λειτουργεί σωστά");
 });
 
+// Προβολή όλων των δημοπρασιών (χωρίς φίλτρα)
+router.get("/all", auctionController.getAllAuctions);
+
 // Προβολή δημοπρασίας με ID (όλοι)
 router.get("/:id", auctionController.getAuctionById);
 

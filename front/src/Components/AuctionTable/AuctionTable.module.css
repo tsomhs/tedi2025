@@ -1,0 +1,99 @@
+/* =======================
+   Auction Table
+======================= */
+.auctionTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.auctionTable th,
+.auctionTable td {
+  border: 1px solid #07070767;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.auctionTable th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.auctionTable tr:nth-child(even) {
+  background-color: #11cc75e0;
+}
+.auctionTable tr:nth-child(odd) {
+  background-color: #0aa72428;
+}
+
+.actions {
+  display: flex;
+  justify-content: start;
+  gap: 50px;
+  min-height: 2rem;
+}
+
+/* =======================
+   Buttons
+======================= */
+
+.edit {
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #4caf50;
+  color: white;
+}
+.edit:hover {
+  background-color: #3d8b41;
+}
+
+.delete {
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #f44336;
+  color: white;
+}
+.delete:hover {
+  background-color: #c53a2f;
+}
+
+.start {
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #ff9800;
+  color: white;
+}
+.start:hover {
+  background-color: #e68900;
+}
+
+.bids {
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #9c27b0;
+  color: white;
+}
+.bids:hover {
+  background-color: #7b1fa2;
+}
+
+.info {
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #2196f3;
+  color: white;
+}
+.info:hover {
+  background-color: #1976d2;
+}

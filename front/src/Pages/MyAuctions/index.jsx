@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import styles from "./MyAuctions.module.css";
 import { useNavigate } from "react-router-dom";
-import formatDate from "../../Utils/formatDate";
-import { CreateAuctionApi, getAllAuctions } from "../../axios/auth";
-
-// TODO To active kai to pending tha eprepe na ta ipologizoume analogws an to Date.now() einai anamesa sto auction starts kai ends
+import { createAuction, getAllAuctions, deleteAuction } from "../../axios/auth";
+import AuctionTable from "../../Components/AuctionTable";
 
 function MyAuctions() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(1); // "Active" or "Pending"
+  const [activeTab, setActiveTab] = useState(1); // 1 = Active, 0 = Pending
   const [auctions, setAuctions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [notification, setNotification] = useState({ message: "", type: "" });
 
   const [newAuction, setNewAuction] = useState({
     name: "",
@@ -22,27 +21,111 @@ function MyAuctions() {
     description: "",
     location: "",
     country: "",
-    starts: new Date().toISOString().slice(0, 16), // default to now
+    starts: new Date().toISOString().slice(0, 16),
     ends: "",
   });
 
-  const [notification, setNotification] = useState({ message: "", type: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
+  // Fetch all auctions once
   useEffect(() => {
     const fetchAuctions = async () => {
       try {
-        const data = await getAllAuctions(1, 10);
+        const data = await getAllAuctions();
+
+        // ✅ Correct
         const mappedAuctions = data.auctions.map((a) => ({
           id: a.id,
           name: a.name,
           categories: a.categories || [],
           firstBid: a.first_bid,
-          currently: a.currently || a.first_bid, // if backend doesn't provide
+          currently: a.currently || a.first_bid,
           buyPrice: a.buy_price,
-          numberOfBids: a.number_of_bids || 0, // optional
+          numberOfBids: a.number_of_bids || 0,
           starts: a.started,
           ends: a.ends,
-          status: Number(a.status), // preserves 0 or 1 exactly as backend sends
+          seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
+          bids: a.bids || [],
+          description: a.description || "",
+          location: a.location,
+          country: a.country,
+        }));
+
+        setAuctions(mappedAuctions);
+      } catch (err) {
+        console.error("Failed to fetch auctions:", err);
+      }
+    };
+    fetchAuctions();
+  }, []);
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewAuction((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Create new auction
+  const handleCreateAuction = async () => {
+    const { name, firstBid, buyPrice, starts, ends } = newAuction;
+
+    if (!name || !firstBid || !buyPrice || !starts || !ends) {
+      setNotification({
+        message: "Please fill in all required fields.",
+        type: "error",
+      });
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    if (new Date(starts).getTime() < now) {
+      setNotification({
+        message: "Auction start time must be in the future.",
+        type: "error",
+      });
+      setShowModal(false);
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    if (new Date(ends).getTime() <= new Date(starts).getTime()) {
+      setNotification({
+        message: "Auction end time must be after the start time.",
+        type: "error",
+      });
+      setShowModal(false);
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    const payload = {
+      itemName: name,
+      categories: newAuction.categories.split(",").map((c) => c.trim()),
+      firstBid: parseFloat(firstBid),
+      buyPrice: parseFloat(buyPrice),
+      location: newAuction.location,
+      country: newAuction.country,
+      started: starts,
+      ends,
+      description: newAuction.description,
+    };
+
+    try {
+      const res = await createAuction(payload);
+      if (res.success) {
+        // Refresh auctions
+        const data = await getAllAuctions();
+        const mappedAuctions = data.auctions.map((a) => ({
+          id: a.id,
+          name: a.name,
+          categories: a.categories || [],
+          firstBid: a.first_bid,
+          currently: a.currently || a.first_bid,
+          buyPrice: a.buy_price,
+          numberOfBids: a.number_of_bids || 0,
+          starts: a.started,
+          ends: a.ends,
           seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
           bids: a.bids || [],
           description: a.description || "",
@@ -50,42 +133,55 @@ function MyAuctions() {
           country: a.country,
         }));
         setAuctions(mappedAuctions);
-        console.log("All auctions:", mappedAuctions);
-        console.log(
-          "Filtered auctions:",
-          mappedAuctions.filter((a) => a.status === activeTab)
-        );
-      } catch (err) {
-        setError("Failed to fetch auctions.");
+        setNotification({
+          message: "Auction created successfully!",
+          type: "success",
+        });
+        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+        setNewAuction({
+          name: "",
+          firstBid: "",
+          currently: "",
+          buyPrice: "",
+          categories: "",
+          description: "",
+          location: "",
+          country: "",
+          starts: new Date().toISOString().slice(0, 16),
+          ends: "",
+        });
+        setShowModal(false);
+      } else {
+        setNotification({
+          message: res.msg || "Error creating auction.",
+          type: "error",
+        });
+        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
       }
-    };
-
-    fetchAuctions();
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewAuction((prev) => ({ ...prev, [name]: value }));
+    } catch (err) {
+      console.error(err);
+      setNotification({ message: "Error creating auction.", type: "error" });
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+    }
   };
 
+  // Edit auction in frontend
   const handleEditAuction = () => {
-    setAuctions((prevAuctions) =>
-      prevAuctions.map((auction) =>
-        auction.id === newAuction.id
+    setAuctions((prev) =>
+      prev.map((a) =>
+        a.id === newAuction.id
           ? {
               ...newAuction,
               categories: newAuction.categories.split(",").map((c) => c.trim()),
               firstBid: parseFloat(newAuction.firstBid),
               buyPrice: parseFloat(newAuction.buyPrice),
-              numberOfBids: auction.numberOfBids || 0, // keep existing bids count
-              bids: auction.bids || [], // keep existing bids
-              status: auction.status || 0,
-              seller: auction.seller || { userID: "you", rating: 0 },
+              numberOfBids: a.numberOfBids,
+              bids: a.bids,
+              seller: a.seller,
             }
-          : auction
+          : a
       )
     );
-
     setIsEditing(false);
     setShowModal(false);
     setNotification({
@@ -95,93 +191,54 @@ function MyAuctions() {
     setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
 
-  const handleDeleteAuction = (id) => {
-    setAuctions((prev) => prev.filter((auction) => auction.id !== id));
-    setNotification({
-      message: "Auction deleted successfully!",
-      type: "success",
-    });
+  const handleDeleteAuction = async (id) => {
+    const result = await deleteAuction(id);
+    if (result.success) {
+      setAuctions((prev) => prev.filter((a) => a.id !== id));
+      setNotification({
+        message: "Auction deleted successfully!",
+        type: "success",
+      });
+    } else {
+      setNotification({ message: result.msg, type: "error" });
+    }
     setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
 
-  const handleStartAuction = (id) => {
+  const handleStartAuction = (id) =>
     setAuctions((prev) =>
-      prev.map((auction) =>
-        auction.id === id ? { ...auction, status: 1 } : auction
-      )
+      prev.map((a) => (a.id === id ? { ...a, status: 1 } : a))
     );
-    setNotification({
-      message: "Auction started!",
-      type: "success",
-    });
-    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-  };
 
-  const handleCreateAuction = async () => {
-    const { name, firstBid, buyPrice, starts, ends } = newAuction;
+  // Filter and paginate auctions
+  const now = new Date();
 
-    if (!name || !firstBid || !buyPrice || !starts || !ends) {
-      setShowModal(false);
-      setNotification({
-        message: "Please fill in all required fields.",
-        type: "error",
-      });
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
+  const filteredAuctions = auctions.filter((a) => {
+    const startDate = new Date(a.starts);
+    const endDate = new Date(a.ends);
+
+    if (activeTab === 1) {
+      // Active: started <= now AND ends > now
+      return (
+        startDate.getTime() <= now.getTime() &&
+        endDate.getTime() > now.getTime()
+      );
+    } else if (activeTab === 0) {
+      // Pending: starts in the future
+      return startDate.getTime() > now.getTime();
+    } else if (activeTab === 3) {
+      // Completed: already ended
+      return endDate.getTime() <= now.getTime();
     }
+    return false;
+  });
 
-    if (starts >= ends) {
-      setShowModal(false);
-      setNotification({
-        message: "Start date can't be later than end date.",
-        type: "error",
-      });
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
-    }
+  const totalPages = Math.ceil(filteredAuctions.length / itemsPerPage);
 
-    const auction = {
-      ...newAuction,
-      id: Date.now(),
-      categories: newAuction.categories.split(",").map((c) => c.trim()),
-      firstBid: parseFloat(newAuction.firstBid),
-      currently: parseFloat(newAuction.firstBid), // Initially same as first bid
-      buyPrice: parseFloat(newAuction.buyPrice),
-      numberOfBids: 0,
-      starts: newAuction.starts || new Date().toISOString(),
-      ends: newAuction.ends,
-      status: 0,
-      seller: { userID: "you", rating: 0 },
-      bids: [],
-    };
-
-    // This is temporary and does NOT affect the backend
-    setAuctions((prev) => [...prev, auction]);
-
-    setShowModal(false);
-    setNotification({
-      message: "Auction created successfully!",
-      type: "success",
-    });
-    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-
-    setNewAuction({
-      name: "",
-      firstBid: "",
-      currently: "",
-      buyPrice: "",
-      categories: "",
-      description: "",
-      location: "",
-      country: "",
-      starts: "",
-      ends: "",
-    });
-
-    await CreateAuctionApi(auction);
-  };
-
-  const filteredAuctions = auctions.filter((a) => a.status === activeTab);
+  const paginatedAuctions = filteredAuctions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className={styles.container}>
@@ -214,7 +271,6 @@ function MyAuctions() {
               value={newAuction.firstBid}
               onChange={handleInputChange}
             />
-
             <input
               type="number"
               name="buyPrice"
@@ -226,7 +282,6 @@ function MyAuctions() {
             <input
               type="datetime-local"
               name="starts"
-              placeholder="Starts"
               value={newAuction.starts}
               onChange={handleInputChange}
             />
@@ -234,7 +289,6 @@ function MyAuctions() {
             <input
               type="datetime-local"
               name="ends"
-              placeholder="End"
               value={newAuction.ends}
               onChange={handleInputChange}
             />
@@ -267,137 +321,14 @@ function MyAuctions() {
             />
             <div className={styles.modalButtons}>
               <button
-                onClick={handleCreateAuction}
                 className={styles.createBtn}
+                onClick={handleCreateAuction}
               >
                 Create
               </button>
               <button
+                className={styles.cancelBtn}
                 onClick={() => setShowModal(false)}
-                className={styles.cancelBtn}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!showModal && isEditing && (
-        <div className={styles.editOverlay}>
-          <div className={styles.editAuction}>
-            <h2>Edit Auction</h2>
-            <label>Auction Name</label>
-            <input
-              type="text"
-              name="name"
-              placeholder="Auction Name"
-              value={newAuction.name}
-              onChange={handleInputChange}
-            />
-            <label>First Bid</label>
-            <input
-              type="number"
-              name="firstBid"
-              placeholder="First Bid"
-              value={newAuction.firstBid}
-              onChange={handleInputChange}
-            />
-            <label>Buy Price</label>
-            <input
-              type="number"
-              name="buyPrice"
-              placeholder="Buy Price"
-              value={newAuction.buyPrice}
-              onChange={handleInputChange}
-            />
-            <label>Start Date and Time</label>
-            <input
-              type="datetime-local"
-              name="starts"
-              placeholder="Starts"
-              value={newAuction.starts}
-              onChange={handleInputChange}
-            />
-            <label>End Date and Time</label>
-            <input
-              type="datetime-local"
-              name="ends"
-              placeholder="End"
-              value={newAuction.ends}
-              onChange={handleInputChange}
-            />
-            <label>Categories</label>
-            <input
-              type="text"
-              name="categories"
-              placeholder="Categories (comma separated)"
-              value={newAuction.categories}
-              onChange={handleInputChange}
-            />
-            <label>Country</label>
-            <input
-              type="text"
-              name="country"
-              placeholder="Country"
-              value={newAuction.country}
-              onChange={handleInputChange}
-            />
-            <label>Location</label>
-            <input
-              type="text"
-              name="location"
-              placeholder="Location"
-              value={newAuction.location}
-              onChange={handleInputChange}
-            />
-            <label>Description</label>
-            <textarea
-              name="description"
-              placeholder="Description"
-              value={newAuction.description}
-              onChange={handleInputChange}
-            />
-            <div className={styles.modalButtons}>
-              <button
-                onClick={() => {
-                  handleEditAuction();
-                  setNewAuction({
-                    name: "",
-                    firstBid: "",
-                    currently: "",
-                    buyPrice: "",
-                    categories: "",
-                    description: "",
-                    location: "",
-                    country: "",
-                    starts: "",
-                    ends: "",
-                  });
-                  setIsEditing(false);
-                }}
-                className={styles.createBtn}
-              >
-                Save changes
-              </button>
-
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setNewAuction({
-                    name: "",
-                    firstBid: "",
-                    currently: "",
-                    buyPrice: "",
-                    categories: "",
-                    description: "",
-                    location: "",
-                    country: "",
-                    starts: "",
-                    ends: "",
-                  });
-                }}
-                className={styles.cancelBtn}
               >
                 Cancel
               </button>
@@ -410,134 +341,79 @@ function MyAuctions() {
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${activeTab === 1 ? styles.activeTab : ""}`}
-          onClick={() => setActiveTab(1)}
+          onClick={() => {
+            setActiveTab(1);
+            setCurrentPage(1); // reset
+          }}
         >
           Active
         </button>
         <button
           className={`${styles.tab} ${activeTab === 0 ? styles.activeTab : ""}`}
-          onClick={() => setActiveTab(0)}
+          onClick={() => {
+            setActiveTab(0);
+            setCurrentPage(1); // reset
+          }}
         >
           Pending
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === 3 ? styles.activeTab : ""}`}
+          onClick={() => {
+            setActiveTab(3);
+            setCurrentPage(1); // reset
+          }}
+        >
+          Completed
+        </button>
       </div>
 
-      {/* Auctions Table */}
-      <div className={styles.auctionList}>
+      {/* Notifications */}
+      {notification.message && (
         <div
           className={`${styles.notification} ${
             notification.type === "error" ? styles.error : styles.success
           }`}
-          style={{
-            visibility: notification.message ? "visible" : "hidden",
-          }}
         >
-          {
-            notification.message ||
-              "Auction updated successfully! " /* non-breaking space keeps height */
-          }
+          {notification.message}
         </div>
+      )}
 
-        <AuctionTable
-          auctions={filteredAuctions || []} // ✅ now uses the filtered list
-          onEdit={(auction) => {
-            setIsEditing(true);
-            setNewAuction({
-              ...auction,
-              categories: auction.categories.join(", "),
-            });
-          }}
-          onDelete={(id) => handleDeleteAuction(id)}
-          onStart={(id) => handleStartAuction(id)}
-          onBids={() => navigate("/bids")}
-          onInfo={(id) => navigate(`/my-auctions/${id}`)}
-        />
+      {/* Auctions Table */}
+      <AuctionTable
+        auctions={paginatedAuctions}
+        onEdit={(auction) => {
+          setIsEditing(true);
+          setNewAuction({
+            ...auction,
+            categories: auction.categories.join(", "),
+          });
+        }}
+        onDelete={handleDeleteAuction}
+        onStart={handleStartAuction}
+        onBids={() => navigate("/bids")}
+        onInfo={(id) => navigate(`/my-auctions/${id}`)}
+      />
+
+      {/* Pagination */}
+      <div style={{ marginTop: "10px" }}>
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          Prev
+        </button>
+        <span style={{ margin: "0 10px" }}>
+          {currentPage} / {totalPages}
+        </span>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          Next
+        </button>
       </div>
     </div>
   );
 }
-
-function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
-  return (
-    <table className={styles.auctionTable}>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Categories</th>
-          <th>First Bid</th>
-          <th>Current Price</th>
-          <th>Buy Price</th>
-          <th>Bids</th>
-          <th>Start</th>
-          <th>End</th>
-          <th>Location</th>
-          <th>Country</th>
-          <th>Seller</th>
-          <th>Description</th>
-          <th className={styles.actionsHeader}>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {auctions.map((item) => (
-          <tr key={item.id}>
-            <td>{item.name}</td>
-            <td>{item.categories.join(", ")}</td>
-            <td>{item.firstBid}</td>
-            <td>{item.currently}</td>
-            <td>{item.buyPrice}</td>
-            <td>{item.numberOfBids}</td>
-            <td>{formatDate(item.starts)}</td>
-            <td>{formatDate(item.ends)}</td>
-            <td>{item.location}</td>
-            <td>{item.country}</td>
-            <td>
-              {item.seller.userID} (Rating: {item.seller.rating})
-            </td>
-            <td>{item.description}</td>
-            <td className={styles.actions}>
-              <button className={styles.info} onClick={() => onInfo(item.id)}>
-                Info
-              </button>
-              {item.status === 0 && (
-                <>
-                  <button
-                    className={styles.start}
-                    onClick={() => onStart(item.id)}
-                  >
-                    Start
-                  </button>
-                  {item.bids.length === 0 && (
-                    <>
-                      <button
-                        className={styles.edit}
-                        onClick={() => onEdit(item)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className={styles.delete}
-                        onClick={() => onDelete(item.id)}
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                  {item.bids.length > 0 && (
-                    <button
-                      className={styles.bids}
-                      onClick={() => onBids(item.id)}
-                    >
-                      Bids
-                    </button>
-                  )}
-                </>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 export default MyAuctions;

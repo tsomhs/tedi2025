@@ -1,7 +1,7 @@
 -- Χρήστες (admin, seller, bidder, visitor)
 
 CREATE TABLE users (
-    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -119,9 +119,9 @@ CREATE TABLE ratings (
 --Αποθηκεύει ποιες δημοπρασίες έχει δει ο κάθε χρήστης και πότε.
 CREATE TABLE view_history (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
+  id INT NOT NULL,
   item_id INT NOT NULL,
   viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
