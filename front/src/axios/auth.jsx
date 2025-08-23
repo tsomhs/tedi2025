@@ -235,3 +235,35 @@ export async function deleteAuction(id) {
     return { success: false, msg: err.message };
   }
 }
+
+// Update an auction by ID
+export async function updateAuction(id, auctionData) {
+  const token = localStorage.getItem("token");
+  if (!token || token === "undefined") {
+    console.error("No token found, user not authenticated");
+    return { success: false, msg: "User not authenticated" };
+  }
+
+  try {
+    const res = await axios.put(
+      `http://localhost:5000/api/auctions/${id}`,
+      auctionData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return { success: true, msg: res.data.msg, data: res.data };
+  } catch (err) {
+    console.error("Error updating auction:", err);
+
+    if (err.response) {
+      return { success: false, msg: err.response.data.msg };
+    }
+
+    return { success: false, msg: err.message };
+  }
+}

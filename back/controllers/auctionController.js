@@ -131,6 +131,7 @@ exports.createAuction = (req, res) => {
     }
   );
 };
+
 // Προβολή δημοπρασίας
 exports.getAuctionById = (req, res) => {
   const auctionId = req.params.id;
@@ -163,11 +164,21 @@ exports.getAuctionById = (req, res) => {
   });
 };
 
-// Ενημέρωση δημοπρασίας
 exports.updateAuction = (req, res) => {
   const itemId = req.params.id;
   const userId = req.user.id;
-  const { itemName, description, ends, buyPrice } = req.body;
+
+  const {
+    itemName,
+    description,
+    started: newStart,
+    ends,
+    buyPrice,
+    categories,
+    location,
+    country,
+    firstBid,
+  } = req.body;
 
   const checkQuery = "SELECT * FROM items WHERE id = ?";
   db.query(checkQuery, [itemId], (err, results) => {
@@ -176,17 +187,16 @@ exports.updateAuction = (req, res) => {
       return res.status(404).json({ msg: "Auction not found" });
 
     const item = results[0];
-
     if (item.seller_id !== userId && req.user.role !== "admin") {
       return res.status(403).json({ msg: "Unauthorized" });
     }
 
-    // Έλεγχος αν έχει ξεκινήσει ή υπάρχουν bids
     const now = new Date();
-    const started = new Date(item.started);
-    if (started <= now)
+    if (new Date(item.started) <= now) {
       return res.status(400).json({ msg: "Auction already started" });
+    }
 
+    // Cannot update if bids exist
     db.query(
       "SELECT COUNT(*) AS bidCount FROM bids WHERE item_id = ?",
       [itemId],
@@ -199,14 +209,83 @@ exports.updateAuction = (req, res) => {
             .json({ msg: "Cannot update. Auction already has bids." });
         }
 
+        const startedStr = newStart
+          ? new Date(newStart).toISOString().slice(0, 19).replace("T", " ")
+          : item.started;
+
+        const endsStr = ends
+          ? new Date(ends).toISOString().slice(0, 19).replace("T", " ")
+          : item.ends;
+
         const updateQuery = `
-          UPDATE items SET name = ?, description = ?, ends = ?, buy_price = ? WHERE id = ?`;
+          UPDATE items SET
+            name = ?,
+            description = ?,
+            started = ?,
+            ends = ?,
+            buy_price = ?,
+            first_bid = ?,
+            location = ?,
+            country = ?
+          WHERE id = ?
+        `;
+
         db.query(
           updateQuery,
-          [itemName, description, ends, buyPrice, itemId],
+          [
+            itemName,
+            description,
+            startedStr,
+            endsStr,
+            buyPrice,
+            firstBid,
+            location,
+            country,
+            itemId,
+          ],
           (err) => {
             if (err) return res.status(500).json({ msg: "Update failed", err });
-            res.json({ msg: "Auction updated" });
+
+            // Update categories if provided
+            if (Array.isArray(categories)) {
+              // First delete old categories
+              db.query(
+                "DELETE FROM item_categories WHERE item_id = ?",
+                [itemId],
+                (err) => {
+                  if (err) console.error("Error deleting old categories", err);
+
+                  // Insert new categories
+                  if (categories.length === 0) {
+                    return res.json({
+                      success: true,
+                      msg: "Auction updated successfully",
+                    });
+                  }
+
+                  let remaining = categories.length;
+                  categories.forEach((cat) => {
+                    db.query(
+                      "INSERT INTO item_categories (item_id, category_name) VALUES (?, ?)",
+                      [itemId, cat],
+                      (err) => {
+                        if (err) console.error("Error inserting category", err);
+                        remaining -= 1;
+                        if (remaining === 0) {
+                          res.json({
+                            success: true,
+                            msg: "Auction updated successfully",
+                          });
+                        }
+                      }
+                    );
+                  });
+                }
+              );
+            } else {
+              // No categories update needed
+              res.json({ success: true, msg: "Auction updated successfully" });
+            }
           }
         );
       }
@@ -357,9 +436,30 @@ exports.getAllAuctions = (req, res) => {
       return res.status(500).json({ msg: "DB error", err });
     }
 
-    res.json({
-      auctions: results,
-      total: results.length,
+    const auctions = [];
+
+    let remaining = results.length;
+    if (remaining === 0) return res.json({ auctions: [], total: 0 });
+
+    results.forEach((item) => {
+      db.query(
+        "SELECT category_name FROM item_categories WHERE item_id = ?",
+        [item.id],
+        (err, categories) => {
+          if (err)
+            return res
+              .status(500)
+              .json({ msg: "Error loading categories", err });
+
+          item.categories = categories.map((c) => c.category_name);
+          auctions.push(item);
+
+          remaining -= 1;
+          if (remaining === 0) {
+            res.json({ auctions, total: auctions.length });
+          }
+        }
+      );
     });
   });
 };

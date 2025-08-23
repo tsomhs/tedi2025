@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import styles from "./MyAuctions.module.css";
 import { useNavigate } from "react-router-dom";
-import { createAuction, getAllAuctions, deleteAuction } from "../../axios/auth";
+import {
+  createAuction,
+  getAllAuctions,
+  deleteAuction,
+  updateAuction,
+} from "../../axios/auth";
 import AuctionTable from "../../Components/AuctionTable";
 
 function MyAuctions() {
@@ -21,7 +26,7 @@ function MyAuctions() {
     description: "",
     location: "",
     country: "",
-    starts: new Date().toISOString().slice(0, 16),
+    starts: getLocalDateTime(),
     ends: "",
   });
 
@@ -68,18 +73,40 @@ function MyAuctions() {
 
   // Create new auction
   const handleCreateAuction = async () => {
-    const { name, firstBid, buyPrice, starts, ends } = newAuction;
+    const {
+      name,
+      firstBid,
+      buyPrice,
+      starts,
+      ends,
+      description,
+      location,
+      country,
+      categories,
+    } = newAuction;
 
-    if (!name || !firstBid || !buyPrice || !starts || !ends) {
+    if (
+      !name ||
+      !firstBid ||
+      !buyPrice ||
+      !starts ||
+      !ends ||
+      !description ||
+      !location ||
+      !country ||
+      !categories
+    ) {
       setNotification({
         message: "Please fill in all required fields.",
         type: "error",
       });
+      setShowModal(false);
       setTimeout(() => setNotification({ message: "", type: "" }), 3000);
       return;
     }
+    const now = new Date();
 
-    if (new Date(starts).getTime() < now) {
+    if (new Date(starts).getTime() < now.getTime() - 60 * 1000) {
       setNotification({
         message: "Auction start time must be in the future.",
         type: "error",
@@ -107,7 +134,7 @@ function MyAuctions() {
       location: newAuction.location,
       country: newAuction.country,
       started: starts,
-      ends,
+      ends: ends,
       description: newAuction.description,
     };
 
@@ -147,7 +174,7 @@ function MyAuctions() {
           description: "",
           location: "",
           country: "",
-          starts: new Date().toISOString().slice(0, 16),
+          starts: getLocalDateTime(),
           ends: "",
         });
         setShowModal(false);
@@ -166,29 +193,101 @@ function MyAuctions() {
   };
 
   // Edit auction in frontend
-  const handleEditAuction = () => {
-    setAuctions((prev) =>
-      prev.map((a) =>
-        a.id === newAuction.id
-          ? {
-              ...newAuction,
-              categories: newAuction.categories.split(",").map((c) => c.trim()),
-              firstBid: parseFloat(newAuction.firstBid),
-              buyPrice: parseFloat(newAuction.buyPrice),
-              numberOfBids: a.numberOfBids,
-              bids: a.bids,
-              seller: a.seller,
-            }
-          : a
-      )
-    );
+  const handleEditAuction = async () => {
+    const {
+      name,
+      firstBid,
+      buyPrice,
+      starts,
+      ends,
+      description,
+      location,
+      country,
+      categories,
+    } = newAuction;
+
+    if (
+      !name ||
+      !firstBid ||
+      !buyPrice ||
+      !starts ||
+      !ends ||
+      !description ||
+      !location ||
+      !country ||
+      !categories
+    ) {
+      setNotification({
+        message: "Please fill in all required fields.",
+        type: "error",
+      });
+      setShowModal(false);
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    if (new Date(starts).getTime() < now) {
+      setNotification({
+        message: "Auction start time must be in the future.",
+        type: "error",
+      });
+      setShowModal(false);
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    if (new Date(ends).getTime() <= new Date(starts).getTime()) {
+      setNotification({
+        message: "Auction end time must be after the start time.",
+        type: "error",
+      });
+      setShowModal(false);
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      return;
+    }
+
+    const res = await updateAuction(newAuction.id, {
+      itemName: newAuction.name,
+      description: newAuction.description,
+      starts: newAuction.starts,
+      ends: newAuction.ends,
+      buyPrice: newAuction.buyPrice,
+      categories: newAuction.categories.split(",").map((c) => c.trim()),
+      location: newAuction.location,
+      country: newAuction.country,
+      firstBid: newAuction.firstBid,
+    });
+    if (res.success) {
+      setAuctions((prev) =>
+        prev.map((a) =>
+          a.id === newAuction.id
+            ? {
+                ...newAuction,
+                categories: newAuction.categories
+                  .split(",")
+                  .map((c) => c.trim()),
+                firstBid: parseFloat(newAuction.firstBid),
+                buyPrice: parseFloat(newAuction.buyPrice),
+                numberOfBids: a.numberOfBids,
+                bids: a.bids,
+                seller: a.seller,
+              }
+            : a
+        )
+      );
+      setNotification({
+        message: "Auction updated successfully!",
+        type: "success",
+      });
+    } else {
+      setNotification({
+        message: "There was an error updating auction!",
+        type: "error",
+      });
+    }
+    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
     setIsEditing(false);
     setShowModal(false);
-    setNotification({
-      message: "Auction updated successfully!",
-      type: "success",
-    });
-    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
 
   const handleDeleteAuction = async (id) => {
@@ -205,10 +304,44 @@ function MyAuctions() {
     setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
 
-  const handleStartAuction = (id) =>
-    setAuctions((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: 1 } : a))
-    );
+  function getLocalDateTime() {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
+  const handleStartAuction = async (id) => {
+    const res = await updateAuction(newAuction.id, {
+      itemName: newAuction.name,
+      description: newAuction.description,
+      ends: newAuction.ends,
+      buyPrice: newAuction.buyPrice,
+      categories: newAuction.categories.split(",").map((c) => c.trim()),
+      location: newAuction.location,
+      country: newAuction.country,
+      firstBid: newAuction.firstBid,
+    });
+    if (res.success) {
+      setAuctions((prev) =>
+        prev.map((a) =>
+          a.id === newAuction.id
+            ? {
+                ...newAuction,
+                categories: newAuction.categories
+                  .split(",")
+                  .map((c) => c.trim()),
+                firstBid: parseFloat(newAuction.firstBid),
+                buyPrice: parseFloat(newAuction.buyPrice),
+                numberOfBids: a.numberOfBids,
+                bids: a.bids,
+                seller: a.seller,
+              }
+            : a
+        )
+      );
+    }
+  };
 
   // Filter and paginate auctions
   const now = new Date();
@@ -252,11 +385,11 @@ function MyAuctions() {
       >
         + New Auction
       </button>
-
-      {showModal && !isEditing && (
+      {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <h2>Create New Auction</h2>
+            <h2>{isEditing ? "Edit Auction" : "Create New Auction"}</h2>
+
             <input
               type="text"
               name="name"
@@ -319,16 +452,29 @@ function MyAuctions() {
               value={newAuction.description}
               onChange={handleInputChange}
             />
+
             <div className={styles.modalButtons}>
-              <button
-                className={styles.createBtn}
-                onClick={handleCreateAuction}
-              >
-                Create
-              </button>
+              {isEditing ? (
+                <button
+                  className={styles.createBtn}
+                  onClick={handleEditAuction}
+                >
+                  Save Changes
+                </button>
+              ) : (
+                <button
+                  className={styles.createBtn}
+                  onClick={handleCreateAuction}
+                >
+                  Create
+                </button>
+              )}
               <button
                 className={styles.cancelBtn}
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setIsEditing(false);
+                }}
               >
                 Cancel
               </button>
@@ -384,9 +530,19 @@ function MyAuctions() {
         auctions={paginatedAuctions}
         onEdit={(auction) => {
           setIsEditing(true);
+          setShowModal(true);
+
           setNewAuction({
-            ...auction,
+            id: auction.id,
+            name: auction.name,
+            firstBid: auction.firstBid,
+            buyPrice: auction.buyPrice,
             categories: auction.categories.join(", "),
+            description: auction.description,
+            location: auction.location,
+            country: auction.country,
+            starts: new Date(auction.starts).toISOString().slice(0, 16),
+            ends: new Date(auction.ends).toISOString().slice(0, 16),
           });
         }}
         onDelete={handleDeleteAuction}
