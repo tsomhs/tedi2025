@@ -303,43 +303,59 @@ function MyAuctions() {
     }
     setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
-
   function getLocalDateTime() {
     const now = new Date();
+    const bufferMinutes = 2; // ensures start time is slightly in the future
+    now.setMinutes(now.getMinutes() + bufferMinutes);
     const offset = now.getTimezoneOffset();
     const local = new Date(now.getTime() - offset * 60000);
     return local.toISOString().slice(0, 16);
   }
 
-  const handleStartAuction = async (id) => {
-    const res = await updateAuction(newAuction.id, {
-      itemName: newAuction.name,
-      description: newAuction.description,
-      ends: newAuction.ends,
-      buyPrice: newAuction.buyPrice,
-      categories: newAuction.categories.split(",").map((c) => c.trim()),
-      location: newAuction.location,
-      country: newAuction.country,
-      firstBid: newAuction.firstBid,
-    });
-    if (res.success) {
-      setAuctions((prev) =>
-        prev.map((a) =>
-          a.id === newAuction.id
-            ? {
-                ...newAuction,
-                categories: newAuction.categories
-                  .split(",")
-                  .map((c) => c.trim()),
-                firstBid: parseFloat(newAuction.firstBid),
-                buyPrice: parseFloat(newAuction.buyPrice),
-                numberOfBids: a.numberOfBids,
-                bids: a.bids,
-                seller: a.seller,
-              }
-            : a
-        )
-      );
+  const handleStartAuction = async (auction) => {
+    try {
+      const updatedData = {
+        itemName: auction.name,
+        description: auction.description,
+        started: getLocalDateTime(),
+        ends: auction.ends?.slice(0, 16),
+        buyPrice: auction.buyPrice ?? 0,
+        firstBid: auction.firstBid ?? 0,
+        currently: auction.currently ?? auction.firstBid ?? 0,
+        categories: auction.categories,
+        location: auction.location,
+        country: auction.country,
+      };
+
+      const response = await updateAuction(auction.id, updatedData);
+      if (response.success) {
+        // Show notification
+        setNotification({
+          message: `Auction "${auction.name}" started successfully!`,
+          type: "success",
+        });
+        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+
+        const nowISO = new Date().toISOString().slice(0, 16);
+        // Move auction to active instantly
+        setAuctions((prev) =>
+          prev.map((a) =>
+            a.id === auction.id
+              ? { ...a, starts: nowISO, currently: updatedData.currently ?? 0 }
+              : a
+          )
+        );
+
+        // Switch to Active tab automatically
+        setActiveTab(1);
+      }
+    } catch (error) {
+      console.error("Error starting auction:", error);
+      setNotification({
+        message: `Error starting auction "${auction.name}".`,
+        type: "error",
+      });
+      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
     }
   };
 
@@ -381,7 +397,23 @@ function MyAuctions() {
 
       <button
         className={styles.newAuctionBtn}
-        onClick={() => setShowModal(true)}
+        onClick={() => {
+          setShowModal(true);
+          // Reset newAuction and refresh start date
+          setNewAuction({
+            name: "",
+            firstBid: "",
+            currently: "",
+            buyPrice: "",
+            categories: "",
+            description: "",
+            location: "",
+            country: "",
+            starts: getLocalDateTime(), // Refresh to current time
+            ends: "",
+          });
+          setIsEditing(false); // ensure editing mode is off
+        }}
       >
         + New Auction
       </button>

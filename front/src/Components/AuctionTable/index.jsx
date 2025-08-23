@@ -53,7 +53,7 @@ function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
                   <>
                     <button
                       className={styles.start}
-                      onClick={() => onStart(item.id)}
+                      onClick={() => onStart(item)}
                     >
                       Start
                     </button>
