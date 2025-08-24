@@ -10,7 +10,8 @@ function UserRole() {
 
     if (res.success) {
       console.log(res.msg);
-      navigate("/home");
+      // Pass role via router state
+      navigate("/home", { state: { role } });
     } else {
       alert("Error: " + res.msg);
     }

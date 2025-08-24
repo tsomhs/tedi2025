@@ -13,7 +13,7 @@ exports.register = (req, res) => {
     last_name,
     phone_number,
     country,
-    address,
+    location,
     vat_number,
     role,
   } = req.body;
@@ -39,8 +39,8 @@ exports.register = (req, res) => {
       const hashed = bcrypt.hashSync(password, 10);
 
       const sql = `INSERT INTO users
-      (username, password, email, role, approved, first_name, last_name, phone_number, country, address, vat_number)
-      VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`;
+(username, password, email, role, approved, first_name, last_name, phone_number, country, location, vat_number, seller_rating, buyer_rating)
+VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 0, 0)`;
 
       const params = [
         username,
@@ -51,7 +51,7 @@ exports.register = (req, res) => {
         last_name || null,
         phone_number || null,
         country || null,
-        address || null,
+        location || null,
         vat_number || null,
       ];
 

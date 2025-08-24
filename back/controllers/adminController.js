@@ -2,8 +2,7 @@ const db = require("../config/db");
 
 // GET /api/admin/users?approved
 exports.listUsers = (req, res) => {
-  const sql = `SELECT id, username, email, role, approved, first_name, last_name,
-                      phone_number, country, address, vat_number
+  const sql = `SELECT id, username, email, role, approved, first_name, last_name, phone_number, country, location, vat_number, seller_rating, buyer_rating
                FROM users ORDER BY id DESC`;
   db.query(sql, (err, rows) => {
     if (err) return res.status(500).json({ msg: "DB error", err });

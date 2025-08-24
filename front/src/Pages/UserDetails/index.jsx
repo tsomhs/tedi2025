@@ -23,6 +23,8 @@ function UserDetails() {
     }
   };
 
+  console.log(state.user);
+
   return (
     <div className={styles.container}>
       <button onClick={() => navigate(-1)} className={styles.backBtn}>
@@ -32,7 +34,7 @@ function UserDetails() {
 
       <div className={styles.userDetails}>
         {Object.entries(user)
-          .filter(([key]) => key !== "password" && key !== "confirmedPassword")
+          .filter(([key]) => key !== "role" && key !== "approved")
           .map(([key, value]) => (
             <div key={key} className={styles.detailRow}>
               <span className={styles.label}>{key}</span>

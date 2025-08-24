@@ -1,20 +1,45 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { placeBid, getUserRole } from "../../axios/auth";
 import formatDate from "../../Utils/formatDate";
-import styles from "./Auction.module.css"; // new CSS module
+import styles from "./Auction.module.css"; // your CSS module
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useNavigate } from "react-router-dom";
+import L from "leaflet";
 
+// Optional: fix default marker icon issue in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 function AuctionPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  // All hooks at the top
+  const [role, setRole] = useState("");
   const [auction, setAuction] = useState(null);
+  const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [bidAmount, setBidAmount] = useState("");
+  const [bidError, setBidError] = useState("");
+  const [coords, setCoords] = useState([0, 0]); // <- move this here
 
+  // Fetch auction and bids
   useEffect(() => {
     const fetchAuction = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/auctions/${id}`);
         setAuction(res.data);
+
+        const bidsRes = await axios.get(`http://localhost:5000/api/bids/${id}`);
+        setBids(bidsRes.data.bids);
       } catch (err) {
         console.error(err);
         setError(
@@ -27,63 +52,254 @@ function AuctionPage() {
     fetchAuction();
   }, [id]);
 
+  useEffect(() => {
+    const fetchRole = async () => {
+      const res = await getUserRole();
+      if (res.success) setRole(res.role);
+    };
+    fetchRole();
+  }, []);
+
+  useEffect(() => {
+    if (!auction) return;
+
+    const fetchCoords = async () => {
+      try {
+        const res = await axios.get(
+          `https://nominatim.openstreetmap.org/search`,
+          {
+            params: {
+              q: `${auction.location}, ${auction.country}`,
+              format: "json",
+            },
+          }
+        );
+        if (res.data.length > 0) {
+          setCoords([parseFloat(res.data[0].lat), parseFloat(res.data[0].lon)]);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchCoords();
+  }, [auction]);
+
   if (loading) return <p className={styles.loading}>Loading auction...</p>;
   if (error) return <p className={styles.error}>{error}</p>;
   if (!auction) return <p className={styles.error}>Auction not found.</p>;
 
+  const handleOpenBid = () => {
+    setShowBidModal(true);
+    setBidAmount("");
+    setBidError("");
+  };
+
+  const handleCloseBid = () => {
+    setShowBidModal(false);
+    setBidAmount("");
+    setBidError("");
+  };
+
+  const handlePlaceBid = async () => {
+    const bidValue = parseFloat(bidAmount);
+    const currentPrice = parseFloat(auction.currently || auction.first_bid);
+
+    if (isNaN(bidValue) || bidValue <= currentPrice) {
+      setBidError(
+        `Bid must be higher than the current price ($${currentPrice})`
+      );
+      return;
+    }
+
+    const confirmBid = window.confirm(
+      `Are you sure you want to place a bid of $${bidValue} on "${auction.name}"?`
+    );
+    if (!confirmBid) return;
+
+    try {
+      const result = await placeBid(auction.id, bidValue);
+
+      if (result.success) {
+        alert(result.msg);
+
+        // Update auction state immediately
+        setAuction((prev) => ({ ...prev, currently: bidValue }));
+
+        // Add the new bid to the bids table locally
+        setBids((prev) => [
+          {
+            amount: bidValue,
+            time: new Date().toISOString(),
+            username: "You",
+            rating: 0,
+          },
+          ...prev,
+        ]);
+
+        // Reset modal
+        setBidAmount("");
+        setBidError("");
+        setShowBidModal(false);
+      } else {
+        setBidError(result.msg);
+      }
+    } catch (err) {
+      console.error(err);
+      setBidError(
+        err.response?.data?.msg || "Error placing bid. Try again later."
+      );
+    }
+  };
+
   return (
     <div className={styles.container}>
-      <div className={styles.card}>
-        <h1 className={styles.title}>{auction.name}</h1>
+      <span
+        className={styles.backArrow}
+        onClick={() => navigate("/browse", { replace: true })}
+      >
+        ←
+      </span>
+      <div className={styles.page} style={{ display: "flex", gap: "2rem" }}>
+        <div className={styles.card} style={{ flex: 2 }}>
+          <h1 className={styles.title}>{auction.name}</h1>
 
-        <div className={styles.infoSection}>
-          <p>
-            <strong>Seller:</strong> {auction.seller_username}
-          </p>
-          <p>
-            <strong>Categories:</strong>{" "}
-            {auction.categories?.join(", ") || "N/A"}
-          </p>
-          <p>
-            <strong>Status:</strong> {auction.status || "Pending"}
-          </p>
+          {/* Auction info */}
+          <div className={styles.infoSection}>
+            <p>
+              <strong>First Bid:</strong> ${auction.first_bid}
+            </p>
+            <p>
+              <strong>Current Price:</strong> $
+              {auction.currently || auction.first_bid}
+            </p>
+            <p>
+              <strong>Buy Price:</strong>{" "}
+              {auction.buy_price ? `$${auction.buy_price}` : "N/A"}
+            </p>
+          </div>
+          <div className={styles.infoSection}>
+            <p>
+              <strong>Start:</strong> {formatDate(auction.started)}
+            </p>
+            <p>
+              <strong>End:</strong> {formatDate(auction.ends)}
+            </p>
+          </div>
+          <div className={styles.infoSection}>
+            <p>
+              <strong>Seller:</strong> {auction.seller_username}
+            </p>
+            <p>
+              <strong>Categories:</strong>{" "}
+              {auction.categories?.join(", ") || "N/A"}
+            </p>
+          </div>
+          <div className={styles.infoSection}>
+            <p>
+              <strong>Country:</strong> {auction.country || "N/A"}
+            </p>
+            <p>
+              <strong>Location:</strong> {auction.location || "N/A"}
+            </p>
+          </div>
+          <div className={styles.infoSection}>
+            <p>
+              <strong>Description:</strong>
+            </p>
+            <p className={styles.description}>
+              {auction.description || "No description"}
+            </p>
+          </div>
+
+          {/* Bid Button */}
+          {role == "buyer" && (
+            <div style={{ marginTop: "1rem" }}>
+              <button className={styles.bidButton} onClick={handleOpenBid}>
+                Place Bid
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className={styles.infoSection}>
-          <p>
-            <strong>First Bid:</strong> ${auction.first_bid}
-          </p>
-          <p>
-            <strong>Current Price:</strong> $
-            {auction.currently || auction.first_bid}
-          </p>
-          <p>
-            <strong>Buy Price:</strong>{" "}
-            {auction.buy_price ? `$${auction.buy_price}` : "N/A"}
-          </p>
-        </div>
+        {/* Bids Table */}
+        <div style={{ flex: 1 }}>
+          <h3>Bids</h3>
+          <table className={styles.bidTable}>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Amount</th>
+                <th>Time</th>
+                {role === "seller" && (
+                  <>
+                    <th>Location</th>
+                    <th>Country</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {bids.map((b, idx) => (
+                <tr key={idx} className={b.isNew ? styles.newBid : ""}>
+                  <td>
+                    {b.username} (Rating: {b.rating})
+                  </td>
+                  <td>${b.amount}</td>
+                  <td>{formatDate(b.time)}</td>
+                  {role === "seller" && (
+                    <>
+                      <td>{b.location || "N/A"}</td>
+                      <td>{b.country || "N/A"}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
+              {bids.length === 0 && (
+                <tr>
+                  <td colSpan={role === "seller" ? 5 : 3}>No bids yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-        <div className={styles.infoSection}>
-          <p>
-            <strong>Description:</strong>
-          </p>
-          <p className={styles.description}>
-            {auction.description || "No description"}
-          </p>
+          {/* Map */}
+          {coords[0] !== 0 && coords[1] !== 0 && (
+            <div style={{ marginTop: "1rem", height: "300px", width: "90%" }}>
+              <MapContainer
+                center={coords}
+                zoom={13}
+                style={{ height: "400px", width: "100%" }}
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <Marker position={coords}>
+                  <Popup>{`${auction.location}, ${auction.country}`}</Popup>
+                </Marker>
+              </MapContainer>
+            </div>
+          )}
         </div>
-
-        <div className={styles.infoSection}>
-          <p>
-            <strong>Start:</strong> {formatDate(auction.started)}
-          </p>
-          <p>
-            <strong>End:</strong> {formatDate(auction.ends)}
-          </p>
-          <p>
-            <strong>Location:</strong> {auction.location || "N/A"},{" "}
-            {auction.country || "N/A"}
-          </p>
-        </div>
+        {/* Bid Modal */}
+        {showBidModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+              <h2>Place Your Bid on "{auction.name}"</h2>
+              <input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => setBidAmount(e.target.value)}
+                placeholder={`Current: $${
+                  auction.currently || auction.first_bid
+                }`}
+              />
+              {bidError && <p className={styles.error}>{bidError}</p>}
+              <div className={styles.modalButtons}>
+                <button onClick={handlePlaceBid}>Submit Bid</button>
+                <button onClick={handleCloseBid}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

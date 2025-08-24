@@ -32,18 +32,18 @@ exports.createAuction = (req, res) => {
   // Convert ISO date strings to MySQL DATETIME format
   const startedFormatted = started.replace("T", " ") + ":00";
   const endsFormatted = ends.replace("T", " ") + ":00";
-
   const itemQuery = `
-    INSERT INTO items
-      (name, first_bid, buy_price, location, country, started, ends, status, seller_id, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  INSERT INTO items
+    (name, first_bid, currently, buy_price, location, country, started, ends, status, seller_id, description)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
   db.query(
     itemQuery,
     [
       itemName,
       parseFloat(firstBid),
+      parseFloat(firstBid), // <-- set currently = first_bid
       buyPrice ? parseFloat(buyPrice) : null,
       location,
       country,

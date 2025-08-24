@@ -8,7 +8,7 @@ export async function RegisterApi({
   last_name,
   phone_number,
   country,
-  address,
+  location,
   vat_number,
   role = "buyer", // default role
 }) {
@@ -21,7 +21,7 @@ export async function RegisterApi({
       last_name,
       phone_number,
       country,
-      address,
+      location,
       vat_number,
       role,
     });
@@ -265,5 +265,38 @@ export async function updateAuction(id, auctionData) {
     }
 
     return { success: false, msg: err.message };
+  }
+}
+
+export const getUserRole = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.get("http://localhost:5000/api/users/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true, role: res.data.user.role };
+  } catch (err) {
+    return { success: false, msg: err.response?.data?.msg || err.message };
+  }
+};
+
+export async function placeBid(itemId, amount) {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("User not authenticated");
+
+    const res = await axios.post(
+      `http://localhost:5000/api/bids/${itemId}`,
+      { amount },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    return { success: true, msg: res.data.msg };
+  } catch (err) {
+    console.error("Error placing bid:", err);
+    return {
+      success: false,
+      msg: err.response?.data?.msg || err.message || "Error placing bid",
+    };
   }
 }

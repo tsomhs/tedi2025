@@ -1,4 +1,3 @@
-/* Use a calm gradient background */
 .container {
   min-height: 100vh;
   display: flex;
@@ -35,7 +34,7 @@
   font-size: 3.5rem;
   margin-bottom: 1rem;
   color: #022912;
-  /* subtle bottom border as accent instead of underline */
+
   border-bottom: 3px solid #00a86b;
   display: inline-block;
   padding-bottom: 0.2rem;

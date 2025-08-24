@@ -1,5 +1,4 @@
 -- Χρήστες (admin, seller, bidder, visitor)
-
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -11,11 +10,13 @@ CREATE TABLE users (
     approved BOOLEAN DEFAULT FALSE,
     phone_number VARCHAR(20),
     country VARCHAR(100),
-    address VARCHAR(255),
+    location VARCHAR(255),
     vat_number VARCHAR(20),
-    rating DECIMAL(3,2) DEFAULT 0.00,
+    seller_rating DECIMAL(3,2) DEFAULT 0.00,
+    buyer_rating DECIMAL(3,2) DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 
 -- Αντικείμενα (δημοπρασίες)

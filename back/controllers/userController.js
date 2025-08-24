@@ -34,3 +34,19 @@ exports.setOwnRole = (req, res) => {
     }
   );
 };
+
+exports.getOwnInfo = (req, res) => {
+  const userId = req.user.id; // set by auth middleware
+
+  db.query(
+    "SELECT id, username, role FROM users WHERE id = ?",
+    [userId],
+    (err, results) => {
+      if (err) return res.status(500).json({ msg: "DB error", err });
+      if (results.length === 0)
+        return res.status(404).json({ msg: "User not found" });
+
+      res.json({ user: results[0] });
+    }
+  );
+};

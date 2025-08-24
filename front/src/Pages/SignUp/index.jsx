@@ -20,7 +20,7 @@ function SignUp() {
     email: "",
     phoneNumber: "",
     country: "",
-    address: "",
+    location: "",
     vatNumber: "",
     password: "",
     confirmedPassword: "",
@@ -75,7 +75,7 @@ function SignUp() {
       last_name: form.lastName,
       phone_number: form.phoneNumber,
       country: form.country,
-      address: form.address,
+      location: form.location,
       vat_number: form.vatNumber,
       role: form.role,
     });
@@ -89,7 +89,7 @@ function SignUp() {
         last_name: form.lastName,
         phone_number: form.phoneNumber,
         country: form.country,
-        address: form.address,
+        location: form.location,
         vat_number: form.vatNumber,
         role: form.role || "buyer",
       });
@@ -155,11 +155,11 @@ function SignUp() {
             error={errors.lastName}
           />
           <FormField
-            label="ADDRESS"
-            name="address"
-            value={form.address}
+            label="Location"
+            name="location"
+            value={form.Location}
             onChange={handleChange}
-            error={errors.address}
+            error={errors.location}
           />
           <FormField
             type="tel"

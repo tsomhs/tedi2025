@@ -391,7 +391,10 @@ function MyAuctions() {
 
   return (
     <div className={styles.container}>
-      <span className={styles.backArrow} onClick={() => navigate("/home")}>
+      <span
+        className={styles.backArrow}
+        onClick={() => navigate("/", { replace: true })}
+      >
         ←
       </span>
 
