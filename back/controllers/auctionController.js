@@ -128,7 +128,6 @@ exports.createAuction = (req, res) => {
     }
   );
 };
-
 // Προβολή δημοπρασίας
 exports.getAuctionById = (req, res) => {
   const auctionId = req.params.id;
@@ -155,7 +154,35 @@ exports.getAuctionById = (req, res) => {
           return res.status(500).json({ msg: "Error loading categories", err });
 
         item.categories = categories.map((c) => c.category_name);
-        res.json(item);
+
+        // Έλεγχος αν η δημοπρασία έχει λήξει
+        const now = new Date();
+        const ends = new Date(item.ends);
+        item.sold = ends <= now;
+
+        if (item.sold) {
+          // Παίρνουμε τον νικητή (αν υπάρχει)
+          const bidQuery = `
+            SELECT b.*, u.username, u.buyer_rating AS rating
+            FROM bids b
+            JOIN users u ON b.bidder_id = u.id
+            WHERE b.item_id = ?
+            ORDER BY b.amount DESC, b.time DESC
+            LIMIT 1
+          `;
+          db.query(bidQuery, [auctionId], (err, bids) => {
+            if (err)
+              return res
+                .status(500)
+                .json({ msg: "Error fetching winner", err });
+
+            item.winner = bids.length > 0 ? bids[0] : null;
+            res.json(item);
+          });
+        } else {
+          item.winner = null;
+          res.json(item);
+        }
       }
     );
   });

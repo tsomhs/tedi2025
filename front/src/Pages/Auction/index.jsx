@@ -226,50 +226,73 @@ function AuctionPage() {
           )}
         </div>
 
-        {/* Bids Table */}
-        <div style={{ flex: 1 }}>
-          <h3>Bids</h3>
-          <table className={styles.bidTable}>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Amount</th>
-                <th>Time</th>
-                {role === "seller" && (
-                  <>
-                    <th>Location</th>
-                    <th>Country</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {bids.map((b, idx) => (
-                <tr key={idx} className={b.isNew ? styles.newBid : ""}>
-                  <td>
-                    {b.username} (Rating: {b.rating})
-                  </td>
-                  <td>${b.amount}</td>
-                  <td>{formatDate(b.time)}</td>
+        <div className={styles.rightColumn}>
+          {/* Winner Section */}
+          {auction.sold && auction.winner && (
+            <div className={styles.winnerSection}>
+              <h3 className={styles.winnerTitle}>Winner</h3>
+              <p className={styles.winnerName}>
+                {auction.winner.username} (Rating: {auction.winner.rating})
+              </p>
+              <p>
+                <strong>Final Price:</strong> ${auction.winner.amount}
+              </p>
+              <button
+                className={styles.messageBuyerBtn}
+                onClick={() =>
+                  alert(`Messaging buyer: ${auction.winner.username}`)
+                }
+              >
+                Message Buyer
+              </button>
+            </div>
+          )}
+
+          {/* Bids Table */}
+          <div className={styles.bidTableContainer}>
+            <h3>Bids</h3>
+            <table className={styles.bidTable}>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Amount</th>
+                  <th>Time</th>
                   {role === "seller" && (
                     <>
-                      <td>{b.location || "N/A"}</td>
-                      <td>{b.country || "N/A"}</td>
+                      <th>Location</th>
+                      <th>Country</th>
                     </>
                   )}
                 </tr>
-              ))}
-              {bids.length === 0 && (
-                <tr>
-                  <td colSpan={role === "seller" ? 5 : 3}>No bids yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {bids.map((b, idx) => (
+                  <tr key={idx} className={b.isNew ? styles.newBid : ""}>
+                    <td>
+                      {b.username} (Rating: {b.rating})
+                    </td>
+                    <td>${b.amount}</td>
+                    <td>{formatDate(b.time)}</td>
+                    {role === "seller" && (
+                      <>
+                        <td>{b.location || "N/A"}</td>
+                        <td>{b.country || "N/A"}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+                {bids.length === 0 && (
+                  <tr>
+                    <td colSpan={role === "seller" ? 5 : 3}>No bids yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {/* Map */}
           {coords[0] !== 0 && coords[1] !== 0 && (
-            <div style={{ marginTop: "1rem", height: "300px", width: "90%" }}>
+            <div className={styles.mapWrapper}>
               <MapContainer
                 center={coords}
                 zoom={13}
@@ -283,6 +306,7 @@ function AuctionPage() {
             </div>
           )}
         </div>
+
         {/* Bid Modal */}
         {showBidModal && (
           <div className={styles.modalOverlay}>

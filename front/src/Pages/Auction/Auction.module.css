@@ -1,33 +1,35 @@
 @import url("https://unpkg.com/leaflet/dist/leaflet.css");
 
+.container {
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(135deg, #86e7c2, #60e0bc);
+  min-height: 100vh;
+  width: 100vw;
+  padding: 2rem 1rem; /* small padding around page */
+  box-sizing: border-box;
+}
+
 .page {
-  width: 90%;
+  display: flex;
+  gap: 2rem; /* space between left card and right column */
+  width: 100%;
+  max-width: 1400px;
+  box-sizing: border-box;
 }
 
 .backArrow {
   position: absolute;
   top: 1.5rem;
   left: 1.5rem;
-  margin-bottom: 1.5rem;
-  font-size: 3.2rem;
+  font-size: 3rem;
   color: #0a0a0a;
   cursor: pointer;
   transition: color 0.3s ease, transform 0.2s ease;
 }
-
 .backArrow:hover {
   color: #06e94a;
   transform: translateX(-3px);
-}
-
-.container {
-  display: flex;
-  justify-content: end;
-  background: linear-gradient(135deg, #86e7c2, #60e0bc);
-  min-height: 100vh;
-  font-size: 1rem;
-  min-width: 100vw;
-  box-sizing: border-box;
 }
 
 .card {
@@ -55,20 +57,19 @@
 }
 
 .infoSection {
-  margin-bottom: 1.5rem;
-  padding: 0.8rem 0;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
   border-bottom: 1px solid #d1d1d1;
 }
-
 .infoSection:last-child {
   border-bottom: none;
 }
 
 .infoSection p {
-  margin: 0.4rem 0;
+  margin: 0.3rem 0;
   color: #1f3d2e;
   line-height: 1.5;
-  font-size: 1rem; /* slightly smaller */
+  font-size: 1rem;
 }
 
 .description {
@@ -82,22 +83,6 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.loading,
-.error {
-  text-align: center;
-  margin-top: 5rem;
-  font-size: 1.2rem; /* smaller */
-  font-weight: 600;
-}
-
-.loading {
-  color: #2f6651;
-}
-
-.error {
-  color: #e74c3c;
-}
-
 .bidButton {
   background-color: #9c27b0;
   color: white;
@@ -105,92 +90,91 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  margin-top: 1rem;
 }
 .bidButton:hover {
   background-color: #7b1fa2;
 }
 
-/* Modal overlay */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+/* Right Column (winner + bids + map) */
+.rightColumn {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-/* Modal box */
-.modal {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 10px;
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-}
-
-.modal input {
-  width: 80%;
-  padding: 8px;
-  margin: 1rem 0;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-
-.modalButtons button {
-  margin: 0 0.5rem;
-  padding: 8px 14px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-}
-.modalButtons button:first-child {
-  background-color: #4caf50;
-  color: white;
-}
-.modalButtons button:first-child:hover {
-  background-color: #3d8b41;
-}
-.modalButtons button:last-child {
-  background-color: #f44336;
-  color: white;
-}
-.modalButtons button:last-child:hover {
-  background-color: #c53a2f;
-}
-
-.bidError {
-  color: red;
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
-}
-
-.bidTableContainer {
+  flex-direction: column;
+  gap: 1.5rem; /* spacing between winner, bids, map */
   flex: 1;
-  min-width: 250px;
-  max-height: 500px;
-  overflow-y: auto;
+  margin-top: 2rem;
+}
+
+.winnerSection {
+  background-color: #f0f8ff; /* light blue */
   padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background-color: #f9f9f9;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.winnerSection:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.winnerTitle {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #102a43;
+}
+
+.winnerName {
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #0a0a0a;
+}
+
+.messageBuyerBtn {
+  background-color: #06e94a;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.messageBuyerBtn:hover {
+  background-color: #05c63b;
+  transform: translateY(-2px);
 }
 
 /* Bids Table */
-.bidTable {
-  width: 90%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  margin-bottom: 4rem;
+.bidTableContainer {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
-/* Table Header */
+.bidTableContainer:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.bidTableContainer h3 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: #007bff;
+}
+
+.bidTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
 .bidTable th {
   background-color: #007bff;
   color: #fff;
@@ -201,28 +185,24 @@
   z-index: 1;
 }
 
-/* Table Cells */
 .bidTable td {
-  border-bottom: 1px solid #ddd;
   padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
 }
 
-/* Alternating Row Colors */
 .bidTable tr:nth-child(even) {
   background-color: #e9f2ff;
 }
-
-/* Highlight newest bid */
 .bidTable tr.newBid {
   background-color: #ffeaa7;
   font-weight: bold;
 }
 
-/* Table Caption / Title */
-.bidTableContainer h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
-  text-align: center;
-  color: #007bff;
+/* Map */
+.mapWrapper {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
