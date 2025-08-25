@@ -34,8 +34,8 @@ exports.createAuction = (req, res) => {
   const endsFormatted = ends.replace("T", " ") + ":00";
   const itemQuery = `
   INSERT INTO items
-    (name, first_bid, currently, buy_price, location, country, started, ends, status, seller_id, description)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (name, first_bid, currently, buy_price, location, country, started, ends, status, seller_id, description, sold, winner_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)
 `;
 
   db.query(
@@ -43,22 +43,19 @@ exports.createAuction = (req, res) => {
     [
       itemName,
       parseFloat(firstBid),
-      parseFloat(firstBid), // <-- set currently = first_bid
+      parseFloat(firstBid),
       buyPrice ? parseFloat(buyPrice) : null,
       location,
       country,
       startedFormatted,
       endsFormatted,
-      0, // pending status
+      0, // status
       userId,
       description,
     ],
     (err, result) => {
-      if (err) {
-        console.error("DB error creating item:", err);
+      if (err)
         return res.status(500).json({ msg: "DB error creating item", err });
-      }
-
       const itemId = result.insertId;
 
       // Handle categories
@@ -495,14 +492,13 @@ exports.buyNow = (req, res) => {
 
       // Update auction: set current price and end immediately
       const updateQuery = `
-        UPDATE items
-        SET currently = ?, ends = NOW()
-        WHERE id = ?
-      `;
-      db.query(updateQuery, [auction.buy_price, auctionId], (err) => {
+  UPDATE items
+  SET currently = ?, ends = NOW(), sold = TRUE, winner_id = ?
+  WHERE id = ?
+`;
+      db.query(updateQuery, [auction.buy_price, userId, auctionId], (err) => {
         if (err)
           return res.status(500).json({ msg: "Error finalizing auction", err });
-
         res.json({
           msg: "Item purchased successfully with Buy Now",
           buyPrice: auction.buy_price,
@@ -510,4 +506,30 @@ exports.buyNow = (req, res) => {
       });
     });
   });
+};
+
+exports.getWonAuctions = async (req, res) => {
+  try {
+    const userId = req.user?.id; // <-- matches the JWT payload
+    if (!userId)
+      return res.status(400).json({ message: "No user id in token" });
+
+    const [rows] = await db.promise().query(
+      `SELECT i.*, u.username AS seller_name, b.bidder_id AS winner_id, b.amount AS final_price
+         FROM items i
+         JOIN bids b ON b.id = (
+             SELECT id FROM bids WHERE item_id = i.id ORDER BY amount DESC, time DESC LIMIT 1
+         )
+         JOIN users u ON i.seller_id = u.id
+         WHERE i.ends < NOW() AND b.bidder_id = ?`,
+      [userId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching won auctions:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching won auctions", error: err.message });
+  }
 };

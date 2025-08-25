@@ -16,6 +16,8 @@ router.get("/", (req, res) => {
   res.send("Η route /api/auctions λειτουργεί σωστά");
 });
 
+router.get("/won", verifyToken, auctionController.getWonAuctions);
+
 router.post("/buy/:id", verifyToken, auctionController.buyNow);
 
 // Προβολή όλων των δημοπρασιών (χωρίς φίλτρα)

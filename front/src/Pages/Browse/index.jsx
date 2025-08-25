@@ -284,7 +284,7 @@ function BrowseAuctions() {
           <h1>Browse Auctions</h1>
           <button
             className={styles.myAuctionsBtn}
-            onClick={() => navigate("/bought-auctions")}
+            onClick={() => navigate("/auctions-bought")}
           >
             My Auctions
           </button>

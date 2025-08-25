@@ -339,3 +339,13 @@ export const getUserById = async (id) => {
     };
   }
 };
+
+export async function getWonAuctions() {
+  const token = localStorage.getItem("token"); // must exist
+  if (!token) throw new Error("No token found");
+
+  const res = await axios.get("http://localhost:5000/api/auctions/won", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+}

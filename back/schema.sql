@@ -31,8 +31,12 @@ CREATE TABLE items (
   ends DATETIME,
   seller_id INT,
   description TEXT,
-  FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
+  sold BOOLEAN DEFAULT FALSE,
+  winner_id INT,
+  FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
 );
+
 
 -- Πολλαπλές κατηγορίες για κάθε item
 CREATE TABLE item_categories (

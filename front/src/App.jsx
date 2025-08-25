@@ -9,6 +9,7 @@ import MyAuctions from "./Pages/MyAuctions/index.jsx";
 import Auction from "./Pages/Auction/index.jsx";
 import Browse from "./Pages/Browse/index.jsx";
 import UserRole from "./Pages/UserRole/index.jsx";
+import AuctionsBought from "./Pages/AuctionsBought/index.jsx";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/my-auctions" element={<MyAuctions />} />
         <Route path="/my-auctions/:id" element={<Auction />} />
         <Route path="/browse" element={<Browse />} />
+        <Route path="/auctions-bought" element={<AuctionsBought />} />
       </Routes>
     </Router>
   );

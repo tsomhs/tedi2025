@@ -1,0 +1,84 @@
+.pageWrapper {
+  height: 100vh;
+  width: 100vw;
+  overflow: auto;
+  background-color: #ffffff; /* White background */
+  font-family: Arial, sans-serif;
+}
+.header {
+  position: relative; /* for positioning the arrow */
+  display: flex;
+  align-items: center;
+  justify-content: center; /* centers the h2 */
+  padding: 1rem 2rem;
+}
+
+.backArrow {
+  position: absolute; /* remove from normal flow */
+  left: 1.5rem;
+  font-size: 3rem;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.backArrow:hover {
+  color: #06e94a;
+  transform: translateX(-3px);
+}
+
+h2 {
+  margin: 0;
+  text-align: center;
+  color: #102a43;
+  font-size: 1.8rem;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  margin: 5rem;
+}
+
+.auctionTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px; /* bigger text */
+}
+
+.auctionTable th,
+.auctionTable td {
+  border: 1px solid #bcccdc;
+  padding: 12px 20px; /* bigger cells */
+  text-align: left;
+}
+
+.auctionTable th {
+  background-color: #334e68;
+  color: #fff;
+}
+
+.auctionTable tr:nth-child(even) {
+  background-color: #f8f9fa; /* subtle row color */
+}
+
+.messageBtn {
+  background-color: #1d72b8;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.messageBtn:hover {
+  background-color: #105b8c;
+}
+
+.loader,
+.error {
+  text-align: center;
+  font-size: 18px;
+  margin-top: 40px;
+  color: #334e68;
+}
