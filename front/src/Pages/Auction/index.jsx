@@ -156,7 +156,11 @@ function AuctionPage() {
     <div className={styles.container}>
       <span
         className={styles.backArrow}
-        onClick={() => navigate("/browse", { replace: true })}
+        onClick={() =>
+          role == "seller"
+            ? navigate("/my-auctions", { replace: true })
+            : navigate("/browse", { replace: true })
+        }
       >
         ←
       </span>

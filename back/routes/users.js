@@ -1,12 +1,19 @@
 const express = require("express");
 const router = express.Router();
+const {
+  getOwnInfo,
+  setOwnRole,
+  getUserById,
+} = require("../controllers/userController");
+const { verifyToken } = require("../middleware/authMiddleware");
 
-const { setOwnRole, getOwnInfo } = require("../controllers/userController");
-const { verifyToken } = require("../middleware/authMiddleware.js");
+// Get info about the logged-in user
+router.get("/me", verifyToken, getOwnInfo);
 
-// Allow logged-in users to set their own role
+// Change your own role
 router.put("/me/role", verifyToken, setOwnRole);
 
-router.get("/me", verifyToken, getOwnInfo);
+// Get info about any user by ID
+router.get("/:id", verifyToken, getUserById);
 
 module.exports = router;

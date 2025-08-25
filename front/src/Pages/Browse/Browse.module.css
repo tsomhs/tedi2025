@@ -30,31 +30,97 @@
   color: #06e94a;
   transform: translateX(-3px);
 }
-
+/* Auction table styling */
 .auctionTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  margin-top: 1rem;
+  font-family: Arial, sans-serif;
+  font-size: 0.95rem;
+  background-color: #4cd6ad;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .auctionTable th,
 .auctionTable td {
-  border: 1px solid #07070767;
-  padding: 8px;
-  text-align: left;
-  vertical-align: top;
+  padding: 10px 12px;
+  text-align: center; /* center all content */
 }
 
 .auctionTable th {
   background-color: #f5f5f5;
   font-weight: bold;
+  color: #333;
 }
 
-.auctionTable tr:nth-child(even) {
-  background-color: #11cc75e0;
+.auctionTable tbody tr:nth-child(even) {
+  background-color: #d7f5e4; /* alternate row color */
 }
-.auctionTable tr:nth-child(odd) {
-  background-color: #0aa72428;
+
+.auctionTable td {
+  vertical-align: middle;
+}
+
+.auctionTable td.actions {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.auctionTable button {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.auctionTable button.info {
+  background-color: #2196f3;
+  color: white;
+}
+
+.auctionTable button.info:hover {
+  background-color: #1976d2;
+}
+
+.auctionTable button.bid {
+  background-color: #4caf50;
+  color: white;
+}
+
+.auctionTable button.bid:hover {
+  background-color: #388e3c;
+}
+
+.auctionTable button.buy {
+  background-color: #ff9800;
+  color: white;
+}
+
+.auctionTable button.buy:hover {
+  background-color: #f57c00;
+}
+
+/* Responsive for mobile */
+@media (max-width: 768px) {
+  .auctionTable th,
+  .auctionTable td {
+    padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+
+  .auctionTable td.actions {
+    flex-direction: column;
+  }
+
+  .auctionTable button {
+    width: 100%;
+    margin-bottom: 4px;
+  }
 }
 
 .actions {
@@ -143,4 +209,146 @@
   color: red;
   margin: 0.5rem 0;
   font-size: 0.9rem;
+}
+
+.actions .buy {
+  background-color: #e74c3c;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.actions .buy:hover {
+  background-color: #c0392b;
+}
+/* Filters container - horizontal toolbar */
+.filterContainer {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap; /* wrap to next line on small screens */
+  align-items: center;
+  gap: 0.75rem 1rem; /* vertical & horizontal spacing */
+  font-weight: bold;
+  font-size: 1rem;
+  background-color: #f9f9f9;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Labels styling */
+.filterContainer label {
+  font-weight: bold;
+  margin-right: 0.25rem;
+}
+
+/* Inputs and selects */
+.filterContainer select,
+.filterContainer input {
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  font-weight: bold;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+/* Hover effect */
+.filterContainer select:hover,
+.filterContainer input:hover {
+  border-color: #2196f3;
+  background-color: #e0f0ff;
+}
+
+/* Focus effect */
+.filterContainer select:focus,
+.filterContainer input:focus {
+  outline: none;
+  border-color: #2196f3;
+  background-color: #e0f0ff;
+}
+
+/* Placeholder styling */
+.filterContainer input::placeholder {
+  font-weight: normal;
+  color: #888;
+}
+
+/* Responsive tweak: make inputs full width on small screens */
+@media (max-width: 600px) {
+  .filterContainer {
+    gap: 0.5rem 0.5rem;
+  }
+
+  .filterContainer select,
+  .filterContainer input {
+    flex: 1 1 100%; /* full width on small screens */
+    min-width: auto;
+  }
+}
+/* Pagination container */
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  font-weight: bold;
+}
+
+/* Pagination buttons */
+.pagination button {
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.pagination button:hover {
+  background-color: #e0f0ff;
+  border-color: #2196f3;
+}
+
+.pagination button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+  color: #999;
+}
+
+/* Current page indicator */
+.pagination span {
+  font-weight: bold;
+  font-size: 1rem;
+}
+/* Header container */
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* My Auctions button */
+.myAuctionsBtn {
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: none;
+  background-color: #2196f3;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.myAuctionsBtn:hover {
+  background-color: #1976d2;
 }

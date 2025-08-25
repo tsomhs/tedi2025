@@ -229,3 +229,38 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* =======================
+   Pagination
+======================= */
+.pagination {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination button {
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.pagination button:hover {
+  background-color: #e0f0ff;
+  border-color: #2196f3;
+}
+
+.pagination button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+  color: #999;
+}
+
+.pagination span {
+  font-weight: bold;
+}

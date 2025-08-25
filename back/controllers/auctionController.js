@@ -424,11 +424,13 @@ exports.getActiveAuctions = (req, res) => {
 // Προβολή όλων των δημοπρασιών (χωρίς σελιδοποίηση)
 exports.getAllAuctions = (req, res) => {
   const query = `
-    SELECT i.*, u.username AS seller_username
-    FROM items i
-    JOIN users u ON i.seller_id = u.id
-    ORDER BY i.started DESC
-  `;
+  SELECT i.*, 
+         u.username AS seller_username,
+         (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count
+  FROM items i
+  JOIN users u ON i.seller_id = u.id
+  ORDER BY i.started DESC
+`;
 
   db.query(query, (err, results) => {
     if (err) {
@@ -460,6 +462,52 @@ exports.getAllAuctions = (req, res) => {
           }
         }
       );
+    });
+  });
+};
+
+exports.buyNow = (req, res) => {
+  const userId = req.user.id;
+  const role = req.user.role;
+  const auctionId = req.params.id;
+
+  if (role !== "buyer") {
+    return res.status(403).json({ msg: "Only buyers can use Buy Now" });
+  }
+
+  // Get auction details
+  const query = "SELECT * FROM items WHERE id = ?";
+  db.query(query, [auctionId], (err, results) => {
+    if (err) return res.status(500).json({ msg: "DB error", err });
+    if (results.length === 0)
+      return res.status(404).json({ msg: "Auction not found" });
+
+    const auction = results[0];
+
+    // Place bid equal to buy_price
+    const bidQuery = `
+      INSERT INTO bids (item_id, bidder_id, time, amount)
+      VALUES (?, ?, NOW(), ?)
+    `;
+    db.query(bidQuery, [auctionId, userId, auction.buy_price], (err) => {
+      if (err)
+        return res.status(500).json({ msg: "Error placing buy bid", err });
+
+      // Update auction: set current price and end immediately
+      const updateQuery = `
+        UPDATE items
+        SET currently = ?, ends = NOW()
+        WHERE id = ?
+      `;
+      db.query(updateQuery, [auction.buy_price, auctionId], (err) => {
+        if (err)
+          return res.status(500).json({ msg: "Error finalizing auction", err });
+
+        res.json({
+          msg: "Item purchased successfully with Buy Now",
+          buyPrice: auction.buy_price,
+        });
+      });
     });
   });
 };

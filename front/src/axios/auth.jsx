@@ -300,3 +300,42 @@ export async function placeBid(itemId, amount) {
     };
   }
 }
+
+export const getOwnInfo = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token provided");
+
+    const res = await axios.get("http://localhost:5000/api/users/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return { success: true, user: res.data.user };
+  } catch (err) {
+    console.error("Error fetching own info:", err);
+    return {
+      success: false,
+      msg: err.response?.data?.msg || "Error fetching user info",
+    };
+  }
+};
+
+export const getUserById = async (id) => {
+  try {
+    const token = localStorage.getItem("token"); // or wherever you store it
+    const res = await axios.get(`http://localhost:5000/api/users/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return { success: true, user: res.data.user };
+  } catch (err) {
+    console.error("Failed to fetch user:", err);
+    return {
+      success: false,
+      msg: err.response?.data?.msg || "Error fetching user",
+    };
+  }
+};

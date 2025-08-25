@@ -8,17 +8,13 @@ function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
       <thead>
         <tr>
           <th>Name</th>
-          <th>Categories</th>
           <th>First Bid</th>
           <th>Current Price</th>
           <th>Buy Price</th>
           <th>Bids</th>
+          <th>Categories</th>
           <th>Start</th>
           <th>End</th>
-          <th>Location</th>
-          <th>Country</th>
-          <th>Seller</th>
-          <th>Description</th>
           <th className={styles.actionsHeader}>Actions</th>
         </tr>
       </thead>
@@ -31,19 +27,13 @@ function AuctionTable({ auctions, onEdit, onDelete, onStart, onBids, onInfo }) {
           return (
             <tr key={item.id}>
               <td>{item.name}</td>
-              <td>{item.categories.join(", ")}</td>
               <td>{item.firstBid}</td>
               <td>{item.currently}</td>
               <td>{item.buyPrice}</td>
               <td>{item.numberOfBids}</td>
+              <td>{item.categories.join(", ")}</td>
               <td>{formatDate(item.starts)}</td>
               <td>{formatDate(item.ends)}</td>
-              <td>{item.location}</td>
-              <td>{item.country}</td>
-              <td>
-                {item.seller.userID} (Rating: {item.seller.rating})
-              </td>
-              <td>{item.description}</td>
               <td className={styles.actions}>
                 <button className={styles.info} onClick={() => onInfo(item.id)}>
                   Info

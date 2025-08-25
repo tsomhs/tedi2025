@@ -50,3 +50,19 @@ exports.getOwnInfo = (req, res) => {
     }
   );
 };
+
+exports.getUserById = (req, res) => {
+  const userId = req.params.id; // get user ID from URL params
+
+  db.query(
+    "SELECT id, username, role, email, first_name, last_name FROM users WHERE id = ?",
+    [userId],
+    (err, results) => {
+      if (err) return res.status(500).json({ msg: "DB error", err });
+      if (results.length === 0)
+        return res.status(404).json({ msg: "User not found" });
+
+      res.json({ user: results[0] });
+    }
+  );
+};

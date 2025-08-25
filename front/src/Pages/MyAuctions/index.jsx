@@ -47,7 +47,7 @@ function MyAuctions() {
           firstBid: a.first_bid,
           currently: a.currently || a.first_bid,
           buyPrice: a.buy_price,
-          numberOfBids: a.number_of_bids || 0,
+          numberOfBids: a.bid_count || 0,
           starts: a.started,
           ends: a.ends,
           seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
@@ -587,19 +587,19 @@ function MyAuctions() {
       />
 
       {/* Pagination */}
-      <div style={{ marginTop: "10px" }}>
+      <div className={styles.pagination}>
         <button
           disabled={currentPage === 1}
-          onClick={() => setCurrentPage(currentPage - 1)}
+          onClick={() => setCurrentPage((p) => p - 1)}
         >
           Prev
         </button>
-        <span style={{ margin: "0 10px" }}>
+        <span>
           {currentPage} / {totalPages}
         </span>
         <button
           disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage(currentPage + 1)}
+          onClick={() => setCurrentPage((p) => p + 1)}
         >
           Next
         </button>
