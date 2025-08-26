@@ -134,3 +134,25 @@
   background-color: yellow;
   font-weight: bold;
 }
+
+.exportButtons {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.exportBtn {
+  background-color: #08b63c;
+  border: none;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.exportBtn:hover {
+  background-color: #05c63b;
+  transform: translateY(-1px);
+}

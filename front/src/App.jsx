@@ -10,6 +10,7 @@ import Auction from "./Pages/Auction/index.jsx";
 import Browse from "./Pages/Browse/index.jsx";
 import UserRole from "./Pages/UserRole/index.jsx";
 import AuctionsBought from "./Pages/AuctionsBought/index.jsx";
+import Messages from "./Pages/Messages/index.jsx";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/my-auctions/:id" element={<Auction />} />
         <Route path="/browse" element={<Browse />} />
         <Route path="/auctions-bought" element={<AuctionsBought />} />
+        <Route path="/messages" element={<Messages />} />
       </Routes>
     </Router>
   );

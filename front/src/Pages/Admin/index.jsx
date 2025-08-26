@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import styles from "./Admin.module.css";
 import { useNavigate } from "react-router-dom";
-import { getAllUsers } from "../../axios/auth.jsx";
+import { getAllUsers, getAllAuctions } from "../../axios/auth.jsx";
 
 function Admin() {
   const [users, setUsers] = useState([]);
@@ -80,6 +80,53 @@ function Admin() {
     })
     .map(({ user }) => user);
 
+  const exportAuctionsJSON = async () => {
+    try {
+      const data = await getAllAuctions();
+      const jsonStr = JSON.stringify(data, null, 2); // pretty print
+
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "auctions.json";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exporting JSON:", err);
+    }
+  };
+
+  const exportAuctionsXML = async () => {
+    try {
+      const data = await getAllAuctions();
+
+      // Basic XML conversion
+      let xml = "<auctions>\n";
+      data.auctions.forEach((a) => {
+        xml += `  <auction>\n`;
+        Object.entries(a).forEach(([key, value]) => {
+          xml += `    <${key}>${value}</${key}>\n`;
+        });
+        xml += `  </auction>\n`;
+      });
+      xml += "</auctions>";
+
+      const blob = new Blob([xml], { type: "application/xml" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "auctions.xml";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exporting XML:", err);
+    }
+  };
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -94,6 +141,15 @@ function Admin() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        {/* Export buttons */}
+        <div className={styles.exportButtons}>
+          <button onClick={exportAuctionsJSON} className={styles.exportBtn}>
+            Export JSON
+          </button>
+          <button onClick={exportAuctionsXML} className={styles.exportBtn}>
+            Export XML
+          </button>
+        </div>
       </div>
 
       <table className={styles.table}>

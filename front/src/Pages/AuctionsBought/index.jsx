@@ -48,7 +48,7 @@ function AuctionsBought() {
               <th>Seller</th>
               <th>Final Price</th>
               <th>Ended</th>
-              <th>Action</th>
+              <th className={styles.actions}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -65,7 +65,13 @@ function AuctionsBought() {
                   <td>{auction.seller_name}</td>
                   <td>{auction.final_price}</td>
                   <td>{new Date(auction.ends).toLocaleString()}</td>
-                  <td>
+                  <td className={styles.buttons}>
+                    <button
+                      className={styles.info}
+                      onClick={() => navigate(`/my-auctions/${auction.id}`)}
+                    >
+                      Info
+                    </button>
                     <button
                       className={styles.messageBtn}
                       onClick={() =>

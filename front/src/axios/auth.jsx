@@ -132,7 +132,6 @@ export async function createAuction(auctionData) {
   }
 }
 // Get all auctions with optional pagination
-// axios/auth.js (or wherever you keep your API calls)
 export async function getAllAuctions() {
   try {
     const res = await axios.get("http://localhost:5000/api/auctions/all");

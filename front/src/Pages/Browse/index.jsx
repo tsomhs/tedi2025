@@ -34,9 +34,7 @@ function BrowseAuctions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [location, setLocation] = useState("");
-
-  const [filteredAuctions, setFilteredAuctions] = useState([]);
+  const [locationSearch, setLocationSearch] = useState("");
 
   // user info
   useEffect(() => {
@@ -49,35 +47,13 @@ function BrowseAuctions() {
     fetchUser();
   }, []);
 
-  // Apply filters whenever something changes
-  useEffect(() => {
-    let filtered = allAuctions.filter((a) => {
-      // Determine price to use (current bid if exists, otherwise first bid)
-      const price = parseFloat(a.current_price ?? a.first_bid);
-      if (isNaN(price)) return false;
-
-      // Category filter
-      const matchesCategory =
-        selectedCategory === "All" ||
-        (a.categories && a.categories.includes(selectedCategory));
-
-      // Price filter
-      const matchesMin = minPrice === "" || price >= parseFloat(minPrice);
-      const matchesMax = maxPrice === "" || price <= parseFloat(maxPrice);
-
-      return matchesCategory && matchesMin && matchesMax;
-    });
-
-    setFilteredAuctions(filtered);
-    setCurrentPage(1); // reset to first page whenever filter changes
-  }, [allAuctions, selectedCategory, minPrice, maxPrice]);
-
   // fetch auctions
   useEffect(() => {
     const fetchAuctions = async () => {
       setLoading(true);
       try {
         const data = await getAllAuctions();
+
         const now = new Date();
 
         const mappedPromises = data.auctions.map(async (a) => {
@@ -91,8 +67,9 @@ function BrowseAuctions() {
             name: a.name,
             categories: a.categories || [],
             firstBid: a.first_bid,
-            currently: a.currently,
+            currently: a.currently || a.first_bid,
             buyPrice: a.buy_price,
+            numberOfBids: a.bid_count || 0,
             starts: a.started,
             ends: a.ends,
             seller: {
@@ -102,8 +79,10 @@ function BrowseAuctions() {
             },
             bids: a.bids || [],
             description: a.description || "",
-            location: a.location,
+            latitude: a.latitude,
+            longitude: a.longitude,
             country: a.country,
+            location: a.location,
           };
         });
 
@@ -168,18 +147,25 @@ function BrowseAuctions() {
     }
 
     // location
-    if (location.trim() !== "") {
-      const loc = location.toLowerCase();
+    if (locationSearch.trim() !== "") {
+      const loc = locationSearch.toLowerCase();
       filtered = filtered.filter(
         (a) =>
-          a.location.toLowerCase().includes(loc) ||
-          a.country.toLowerCase().includes(loc)
+          (a.country && a.country.toLowerCase().includes(loc)) ||
+          (a.location && a.location.toLowerCase().includes(loc))
       );
     }
 
     setAuctions(filtered);
     setCurrentPage(1); // reset pagination on filter change
-  }, [selectedCategory, searchTerm, minPrice, maxPrice, location, allAuctions]);
+  }, [
+    selectedCategory,
+    searchTerm,
+    minPrice,
+    maxPrice,
+    locationSearch,
+    allAuctions,
+  ]);
 
   // pagination
   const totalPages = Math.ceil(auctions.length / itemsPerPage);
@@ -226,12 +212,20 @@ function BrowseAuctions() {
 
     if (result.success) {
       alert(result.msg);
-      const updatedAuction = { ...currentAuction, currently: bidValue };
+
+      // ✅ increment numberOfBids locally
+      const updatedAuction = {
+        ...currentAuction,
+        currently: bidValue,
+        numberOfBids: (currentAuction.numberOfBids || 0) + 1,
+      };
+
       setCurrentAuction(updatedAuction);
 
       setAuctions((prev) =>
         prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
       );
+
       setAllAuctions((prev) =>
         prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
       );
@@ -282,12 +276,14 @@ function BrowseAuctions() {
         </span>
         <div className={styles.headerContent}>
           <h1>Browse Auctions</h1>
-          <button
-            className={styles.myAuctionsBtn}
-            onClick={() => navigate("/auctions-bought")}
-          >
-            My Auctions
-          </button>
+          {role != "visitor" && (
+            <button
+              className={styles.myAuctionsBtn}
+              onClick={() => navigate("/auctions-bought")}
+            >
+              My Auctions
+            </button>
+          )}
         </div>
       </div>
 
@@ -334,9 +330,9 @@ function BrowseAuctions() {
             <label>Location:</label>
             <input
               type="text"
-              placeholder="City or Country"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Location/Country"
+              value={locationSearch}
+              onChange={(e) => setLocationSearch(e.target.value)}
             />
           </div>
 
@@ -349,6 +345,7 @@ function BrowseAuctions() {
                 <th>Current Price</th>
                 <th>Buy Price</th>
                 <th>Categories</th>
+                <th>Bids</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Action</th>
@@ -362,6 +359,8 @@ function BrowseAuctions() {
                   <td>{a.currently || a.firstBid}</td>
                   <td>{a.buyPrice}</td>
                   <td>{a.categories.join(", ")}</td>
+                  <td>{a.numberOfBids}</td>
+
                   <td>{formatDate(a.starts)}</td>
                   <td>{formatDate(a.ends)}</td>
                   <td className={styles.actions}>

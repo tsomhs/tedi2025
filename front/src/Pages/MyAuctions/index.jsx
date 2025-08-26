@@ -24,8 +24,10 @@ function MyAuctions() {
     buyPrice: "",
     categories: "",
     description: "",
-    location: "",
+    latitude: "",
+    longitude: "",
     country: "",
+    location: "",
     starts: getLocalDateTime(),
     ends: "",
   });
@@ -53,8 +55,10 @@ function MyAuctions() {
           seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
           bids: a.bids || [],
           description: a.description || "",
-          location: a.location,
+          latitude: a.latitude,
+          longitude: a.longitude,
           country: a.country,
+          location: a.location,
         }));
 
         setAuctions(mappedAuctions);
@@ -80,8 +84,10 @@ function MyAuctions() {
       starts,
       ends,
       description,
-      location,
+      latitude,
+      longitude,
       country,
+      location,
       categories,
     } = newAuction;
 
@@ -92,8 +98,7 @@ function MyAuctions() {
       !starts ||
       !ends ||
       !description ||
-      !location ||
-      !country ||
+      !(latitude || longitude || location || country) ||
       !categories
     ) {
       setNotification({
@@ -131,8 +136,10 @@ function MyAuctions() {
       categories: newAuction.categories.split(",").map((c) => c.trim()),
       firstBid: parseFloat(firstBid),
       buyPrice: parseFloat(buyPrice),
-      location: newAuction.location,
+      latitude: newAuction.latitude !== "" ? parseFloat(latitude) : null,
+      longitude: newAuction.longitude !== "" ? parseFloat(longitude) : null,
       country: newAuction.country,
+      location: newAuction.location,
       started: starts,
       ends: ends,
       description: newAuction.description,
@@ -156,8 +163,10 @@ function MyAuctions() {
           seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
           bids: a.bids || [],
           description: a.description || "",
-          location: a.location,
+          latitude: a.latitude,
+          longitude: a.longitude,
           country: a.country,
+          location: a.location,
         }));
         setAuctions(mappedAuctions);
         setNotification({
@@ -172,8 +181,10 @@ function MyAuctions() {
           buyPrice: "",
           categories: "",
           description: "",
-          location: "",
+          latitude: "",
+          longitude: "",
           country: "",
+          location: "",
           starts: getLocalDateTime(),
           ends: "",
         });
@@ -201,8 +212,10 @@ function MyAuctions() {
       starts,
       ends,
       description,
-      location,
+      latitude,
+      longitude,
       country,
+      location,
       categories,
     } = newAuction;
 
@@ -213,8 +226,7 @@ function MyAuctions() {
       !starts ||
       !ends ||
       !description ||
-      !location ||
-      !country ||
+      !(latitude || longitude || location || country) ||
       !categories
     ) {
       setNotification({
@@ -253,8 +265,10 @@ function MyAuctions() {
       ends: newAuction.ends,
       buyPrice: newAuction.buyPrice,
       categories: newAuction.categories.split(",").map((c) => c.trim()),
-      location: newAuction.location,
+      latitude: newAuction.latitude,
+      longitude: newAuction.longitude,
       country: newAuction.country,
+      location: newAuction.location,
       firstBid: newAuction.firstBid,
     });
     if (res.success) {
@@ -323,8 +337,10 @@ function MyAuctions() {
         firstBid: auction.firstBid ?? 0,
         currently: auction.currently ?? auction.firstBid ?? 0,
         categories: auction.categories,
-        location: auction.location,
+        latitude: auction.latitude,
+        longitude: auction.longitude,
         country: auction.country,
+        location: auction.location,
       };
 
       const response = await updateAuction(auction.id, updatedData);
@@ -410,8 +426,10 @@ function MyAuctions() {
             buyPrice: "",
             categories: "",
             description: "",
-            location: "",
+            latitude: "",
+            longitude: "",
             country: "",
+            location: "",
             starts: getLocalDateTime(), // Refresh to current time
             ends: "",
           });
@@ -469,16 +487,30 @@ function MyAuctions() {
             />
             <input
               type="text"
-              name="location"
-              placeholder="Location"
-              value={newAuction.location}
+              name="latitude"
+              placeholder="Latitude"
+              value={newAuction.latitude}
+              onChange={handleInputChange}
+            />
+            <input
+              type="text"
+              name="longitude"
+              placeholder="Longitude "
+              value={newAuction.longitude}
               onChange={handleInputChange}
             />
             <input
               type="text"
               name="country"
-              placeholder="Country"
+              placeholder="Country "
               value={newAuction.country}
+              onChange={handleInputChange}
+            />
+            <input
+              type="text"
+              name="location"
+              placeholder="Location "
+              value={newAuction.location}
               onChange={handleInputChange}
             />
             <textarea
@@ -574,8 +606,10 @@ function MyAuctions() {
             buyPrice: auction.buyPrice,
             categories: auction.categories.join(", "),
             description: auction.description,
-            location: auction.location,
+            latitude: auction.latitude,
+            longitude: auction.longitude,
             country: auction.country,
+            location: auction.location,
             starts: new Date(auction.starts).toISOString().slice(0, 16),
             ends: new Date(auction.ends).toISOString().slice(0, 16),
           });

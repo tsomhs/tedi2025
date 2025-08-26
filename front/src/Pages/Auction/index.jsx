@@ -61,28 +61,43 @@ function AuctionPage() {
   }, []);
 
   useEffect(() => {
-    if (!auction) return;
-
-    const fetchCoords = async () => {
+    const getCoordsFromLocation = async (loc, country) => {
       try {
-        const res = await axios.get(
-          `https://nominatim.openstreetmap.org/search`,
-          {
-            params: {
-              q: `${auction.location}, ${auction.country}`,
-              format: "json",
-            },
-          }
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            `${loc}, ${country}`
+          )}`
         );
-        if (res.data.length > 0) {
-          setCoords([parseFloat(res.data[0].lat), parseFloat(res.data[0].lon)]);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching geocoded coords:", err);
+      }
+      return [0, 0];
+    };
+
+    const resolveCoords = async () => {
+      if (auction) {
+        if (auction.latitude && auction.longitude) {
+          // Use DB coords
+          setCoords([
+            parseFloat(auction.latitude),
+            parseFloat(auction.longitude),
+          ]);
+        } else if (auction.location || auction.country) {
+          // Fallback to geocode location+country
+          const newCoords = await getCoordsFromLocation(
+            auction.location || "",
+            auction.country || ""
+          );
+          setCoords(newCoords);
+        }
       }
     };
 
-    fetchCoords();
+    resolveCoords();
   }, [auction]);
 
   if (loading) return <p className={styles.loading}>Loading auction...</p>;
@@ -101,14 +116,72 @@ function AuctionPage() {
     setBidError("");
   };
 
+  const handleBuy = (auction) => {
+    const confirmBuy = window.confirm(
+      `Are you sure you want to Buy Now "${auction.name}" for $${auction.buyPrice}?`
+    );
+    if (!confirmBuy) return;
+
+    const token = localStorage.getItem("token");
+
+    axios
+      .post(
+        `http://localhost:5000/api/auctions/buy/${auction.id}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then((res) => {
+        alert(res.data.msg);
+
+        // ✅ Update auction state: mark sold + set winner
+        const winnerData = res.data.winner || {
+          username: "You",
+          rating: 0,
+          amount: auction.buy_price,
+        };
+
+        setAuction((prev) => ({
+          ...prev,
+          sold: true,
+          currently: auction.buy_price, // update current price
+          numberOfBids: (prev.numberOfBids || 0) + 1, // increment bid count
+          winner: winnerData,
+        }));
+
+        // ✅ Add latest bid to bids table locally
+        setBids((prev) => [
+          {
+            amount: auction.buy_price,
+            time: new Date().toISOString(),
+            username: winnerData.username,
+            rating: winnerData.rating || 0,
+          },
+          ...prev,
+        ]);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.response?.data?.msg || "Error processing Buy Now");
+      });
+  };
+
   const handlePlaceBid = async () => {
     const bidValue = parseFloat(bidAmount);
     const currentPrice = parseFloat(auction.currently || auction.first_bid);
+    const buyPrice = parseFloat(auction.buy_price); // ✅ define it here
 
     if (isNaN(bidValue) || bidValue <= currentPrice) {
       setBidError(
         `Bid must be higher than the current price ($${currentPrice})`
       );
+      return;
+    }
+
+    if (buyPrice && bidValue >= buyPrice) {
+      handleBuy(auction); // ✅ pass auction, not currentAuction
+      handleCloseBid();
       return;
     }
 
@@ -123,10 +196,14 @@ function AuctionPage() {
       if (result.success) {
         alert(result.msg);
 
-        // Update auction state immediately
-        setAuction((prev) => ({ ...prev, currently: bidValue }));
+        // ✅ update auction state (price + bid count)
+        setAuction((prev) => ({
+          ...prev,
+          currently: bidValue,
+          numberOfBids: (prev.numberOfBids || 0) + 1,
+        }));
 
-        // Add the new bid to the bids table locally
+        // ✅ prepend new bid to list
         setBids((prev) => [
           {
             amount: bidValue,
@@ -137,7 +214,6 @@ function AuctionPage() {
           ...prev,
         ]);
 
-        // Reset modal
         setBidAmount("");
         setBidError("");
         setShowBidModal(false);
@@ -154,14 +230,7 @@ function AuctionPage() {
 
   return (
     <div className={styles.container}>
-      <span
-        className={styles.backArrow}
-        onClick={() =>
-          role == "seller"
-            ? navigate("/my-auctions", { replace: true })
-            : navigate("/browse", { replace: true })
-        }
-      >
+      <span className={styles.backArrow} onClick={() => navigate(-1)}>
         ←
       </span>
       <div className={styles.page} style={{ display: "flex", gap: "2rem" }}>
@@ -201,10 +270,18 @@ function AuctionPage() {
           </div>
           <div className={styles.infoSection}>
             <p>
-              <strong>Country:</strong> {auction.country || "N/A"}
+              <strong>Location :</strong> {auction.location || "N/A"}
             </p>
             <p>
-              <strong>Location:</strong> {auction.location || "N/A"}
+              <strong>Country :</strong> {auction.country || "N/A"}
+            </p>
+          </div>
+          <div className={styles.infoSection}>
+            <p>
+              <strong>Latitude:</strong> {auction.latitude || "N/A"}
+            </p>
+            <p>
+              <strong>Longitude :</strong> {auction.longitude || "N/A"}
             </p>
           </div>
           <div className={styles.infoSection}>
@@ -217,7 +294,7 @@ function AuctionPage() {
           </div>
 
           {/* Bid Button */}
-          {role == "buyer" && (
+          {role === "buyer" && !auction.sold && (
             <div style={{ marginTop: "1rem" }}>
               <button className={styles.bidButton} onClick={handleOpenBid}>
                 Place Bid
@@ -237,14 +314,16 @@ function AuctionPage() {
               <p>
                 <strong>Final Price:</strong> ${auction.winner.amount}
               </p>
-              <button
-                className={styles.messageBuyerBtn}
-                onClick={() =>
-                  alert(`Messaging buyer: ${auction.winner.username}`)
-                }
-              >
-                Message Buyer
-              </button>
+              {role !== "buyer" && (
+                <button
+                  className={styles.messageBuyerBtn}
+                  onClick={() =>
+                    alert(`Messaging buyer: ${auction.winner.username}`)
+                  }
+                >
+                  Message Buyer
+                </button>
+              )}
             </div>
           )}
 
@@ -259,8 +338,8 @@ function AuctionPage() {
                   <th>Time</th>
                   {role === "seller" && (
                     <>
-                      <th>Location</th>
-                      <th>Country</th>
+                      <th>location</th>
+                      <th>country </th>
                     </>
                   )}
                 </tr>
@@ -300,7 +379,11 @@ function AuctionPage() {
               >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <Marker position={coords}>
-                  <Popup>{`${auction.location}, ${auction.country}`}</Popup>
+                  <Popup>
+                    {auction.latitude && auction.longitude
+                      ? `${auction.latitude}, ${auction.longitude}`
+                      : `${auction.location || ""}, ${auction.country || ""}`}
+                  </Popup>
                 </Marker>
               </MapContainer>
             </div>
@@ -320,7 +403,7 @@ function AuctionPage() {
                   auction.currently || auction.first_bid
                 }`}
               />
-              {bidError && <p className={styles.error}>{bidError}</p>}
+              {bidError && <p className={styles.bidError}>{bidError}</p>}
               <div className={styles.modalButtons}>
                 <button onClick={handlePlaceBid}>Submit Bid</button>
                 <button onClick={handleCloseBid}>Cancel</button>

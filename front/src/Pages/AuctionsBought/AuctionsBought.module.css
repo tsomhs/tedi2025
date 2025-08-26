@@ -34,6 +34,12 @@ h2 {
   font-size: 1.8rem;
 }
 
+.buttons {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
 .tableWrapper {
   overflow-x: auto;
   margin: 5rem;
@@ -62,7 +68,7 @@ h2 {
 }
 
 .messageBtn {
-  background-color: #1d72b8;
+  background-color: #1bc9c0;
   color: #fff;
   border: none;
   padding: 8px 14px;
@@ -72,6 +78,19 @@ h2 {
 }
 
 .messageBtn:hover {
+  background-color: #105b8c;
+}
+.info {
+  background-color: #1d72b8;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.info:hover {
   background-color: #105b8c;
 }
 

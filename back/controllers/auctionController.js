@@ -13,8 +13,10 @@ exports.createAuction = (req, res) => {
     categories,
     firstBid,
     buyPrice,
-    location,
+    latitude,
+    longitude,
     country,
+    location,
     started,
     ends,
     description,
@@ -34,8 +36,8 @@ exports.createAuction = (req, res) => {
   const endsFormatted = ends.replace("T", " ") + ":00";
   const itemQuery = `
   INSERT INTO items
-    (name, first_bid, currently, buy_price, location, country, started, ends, status, seller_id, description, sold, winner_id)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)
+    (name, first_bid, currently, buy_price, latitude, longitude, country, location, started, ends, status, seller_id, description, sold, winner_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)
 `;
 
   db.query(
@@ -44,18 +46,28 @@ exports.createAuction = (req, res) => {
       itemName,
       parseFloat(firstBid),
       parseFloat(firstBid),
-      buyPrice ? parseFloat(buyPrice) : null,
-      location,
-      country,
+      buyPrice !== "" && !isNaN(parseFloat(buyPrice))
+        ? parseFloat(buyPrice)
+        : null,
+      latitude !== "" && !isNaN(parseFloat(latitude))
+        ? parseFloat(latitude)
+        : null,
+      longitude !== "" && !isNaN(parseFloat(longitude))
+        ? parseFloat(longitude)
+        : null,
+      country || null,
+      location || null,
       startedFormatted,
       endsFormatted,
-      0, // status
+      0,
       userId,
       description,
     ],
     (err, result) => {
-      if (err)
+      if (err) {
+        console.error("Error inserting item:", err);
         return res.status(500).json({ msg: "DB error creating item", err });
+      }
       const itemId = result.insertId;
 
       // Handle categories
@@ -69,8 +81,10 @@ exports.createAuction = (req, res) => {
             name: itemName,
             firstBid: parseFloat(firstBid),
             buyPrice: buyPrice ? parseFloat(buyPrice) : null,
-            location,
-            country,
+            latitude: latitude,
+            longitude: longitude,
+            country: country,
+            location: location,
             started: startedFormatted,
             ends: endsFormatted,
             description,
@@ -109,8 +123,10 @@ exports.createAuction = (req, res) => {
                   name: itemName,
                   firstBid: parseFloat(firstBid),
                   buyPrice: buyPrice ? parseFloat(buyPrice) : null,
-                  location,
-                  country,
+                  latitude: latitude !== "" ? parseFloat(latitude) : null,
+                  longitude: longitude !== "" ? parseFloat(longitude) : null,
+                  country: country || null,
+                  location: location || null,
                   started: startedFormatted,
                   ends: endsFormatted,
                   description,
@@ -177,11 +193,19 @@ exports.getAuctionById = (req, res) => {
                 .json({ msg: "Error fetching winner", err });
 
             item.winner = bids.length > 0 ? bids[0] : null;
-            res.json(item);
+            res.json({
+              ...item,
+              location: item.location, // already handled in create/update
+              categories: categories.map((c) => c.category_name),
+            });
           });
         } else {
           item.winner = null;
-          res.json(item);
+          res.json({
+            ...item,
+            location: item.location, // already handled in create/update
+            categories: categories.map((c) => c.category_name),
+          });
         }
       }
     );
@@ -199,8 +223,10 @@ exports.updateAuction = (req, res) => {
     ends,
     buyPrice,
     categories,
-    location,
+    latitude,
+    longitude,
     country,
+    location,
     firstBid,
   } = req.body;
 
@@ -249,8 +275,10 @@ exports.updateAuction = (req, res) => {
             ends = ?,
             buy_price = ?,
             first_bid = ?,
-            location = ?,
-            country = ?
+            latitude = ?,
+            longitude = ?,
+            country = ?,
+            location = ?
           WHERE id = ?
         `;
 
@@ -261,10 +289,12 @@ exports.updateAuction = (req, res) => {
             description,
             startedStr,
             endsStr,
-            buyPrice,
-            firstBid,
-            location,
-            country,
+            buyPrice ? parseFloat(buyPrice) : null,
+            firstBid ? parseFloat(firstBid) : null,
+            latitude !== "" ? parseFloat(latitude) : null,
+            longitude !== "" ? parseFloat(longitude) : null,
+            country || null,
+            location || null,
             itemId,
           ],
           (err) => {
@@ -374,7 +404,7 @@ exports.searchAuctions = (req, res) => {
     q,
     minPrice,
     maxPrice,
-    location,
+    latitude,
     page = 1,
     limit = 10,
   } = req.query;
@@ -409,9 +439,9 @@ exports.searchAuctions = (req, res) => {
     values.push(maxPrice);
   }
 
-  if (location) {
-    baseQuery += " AND i.location LIKE ?";
-    values.push(`%${location}%`);
+  if (latitude) {
+    baseQuery += " AND i.latitude LIKE ?";
+    values.push(`%${latitude}%`);
   }
 
   const offset = (page - 1) * limit;
@@ -446,48 +476,40 @@ exports.getActiveAuctions = (req, res) => {
 };
 
 // Προβολή όλων των δημοπρασιών (χωρίς σελιδοποίηση)
-exports.getAllAuctions = (req, res) => {
-  const query = `
-  SELECT i.*, 
-         u.username AS seller_username,
-         (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count
-  FROM items i
-  JOIN users u ON i.seller_id = u.id
-  ORDER BY i.started DESC
-`;
+exports.getAllAuctions = async (req, res) => {
+  try {
+    const [results] = await db.promise().query(`
+      SELECT i.*, 
+             u.username AS seller_username,
+             (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count
+      FROM items i
+      JOIN users u ON i.seller_id = u.id
+      ORDER BY i.started DESC
+    `);
 
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error("DB error fetching auctions:", err);
-      return res.status(500).json({ msg: "DB error", err });
-    }
+    // Fetch categories for all auctions
+    const auctions = await Promise.all(
+      results.map(async (item) => {
+        const [cats] = await db
+          .promise()
+          .query(
+            "SELECT category_name FROM item_categories WHERE item_id = ?",
+            [item.id]
+          );
 
-    const auctions = [];
+        return {
+          ...item,
+          categories: cats.map((c) => c.category_name),
+          location: item.location, // include location
+        };
+      })
+    );
 
-    let remaining = results.length;
-    if (remaining === 0) return res.json({ auctions: [], total: 0 });
-
-    results.forEach((item) => {
-      db.query(
-        "SELECT category_name FROM item_categories WHERE item_id = ?",
-        [item.id],
-        (err, categories) => {
-          if (err)
-            return res
-              .status(500)
-              .json({ msg: "Error loading categories", err });
-
-          item.categories = categories.map((c) => c.category_name);
-          auctions.push(item);
-
-          remaining -= 1;
-          if (remaining === 0) {
-            res.json({ auctions, total: auctions.length });
-          }
-        }
-      );
-    });
-  });
+    res.json({ auctions, total: auctions.length });
+  } catch (err) {
+    console.error("DB error fetching auctions:", err);
+    res.status(500).json({ msg: "DB error", err });
+  }
 };
 
 exports.buyNow = (req, res) => {

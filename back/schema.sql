@@ -25,7 +25,9 @@ CREATE TABLE items (
   name VARCHAR(255) NOT NULL,
   first_bid DECIMAL(10,2) NOT NULL,
   buy_price DECIMAL(10,2),
-  location VARCHAR(255),
+  latitude DECIMAL(9,6),    
+  longitude DECIMAL(9,6),
+  location VARCHAR(255),    
   country VARCHAR(100),
   started DATETIME,
   ends DATETIME,
@@ -33,9 +35,10 @@ CREATE TABLE items (
   description TEXT,
   sold BOOLEAN DEFAULT FALSE,
   winner_id INT,
-  FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (seller_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (winner_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
+
 
 
 -- Πολλαπλές κατηγορίες για κάθε item

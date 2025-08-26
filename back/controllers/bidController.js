@@ -71,7 +71,7 @@ exports.getBidsForItem = (req, res) => {
   const itemId = req.params.itemId;
 
   const query = `
-    SELECT b.amount, b.time, u.username, u.buyer_rating AS rating, u.location, u.country
+    SELECT b.amount, b.time, u.username, u.buyer_rating AS rating, u.location, u.country 
     FROM bids b
     JOIN users u ON b.bidder_id = u.id
     WHERE b.item_id = ?
