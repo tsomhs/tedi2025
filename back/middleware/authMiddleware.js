@@ -1,23 +1,19 @@
 //middleware/authMiddleware.js
 
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+
+const SECRET_KEY = process.env.JWT_SECRET || "SECRET_KEY";
 
 // Middleware για έλεγχο αν το JWT token είναι έγκυρο
 exports.verifyToken = (req, res, next) => {
-  // Παίρνει το Authorization header
-  const bearer = req.headers['authorization'];
+  const bearer = req.headers["authorization"];
+  if (!bearer) return res.status(403).json({ msg: "No token provided" });
 
-  // Αν δεν υπάρχει, κόβει
-  if (!bearer) return res.status(403).json({ msg: 'No token provided' });
+  const token = bearer.split(" ")[1];
+  if (!token) return res.status(403).json({ msg: "Token missing" });
 
-  // Το token έρχεται συνήθως ως: "Bearer TOKEN"
-  const token = bearer.split(' ')[1];
-
-  // Το ελέγχει με το SECRET_KEY
-  jwt.verify(token, 'SECRET_KEY', (err, decoded) => {
-    if (err) return res.status(403).json({ msg: 'Invalid or expired token' });
-
-    // Αν όλα ΟΚ, σώζει τα δεδομένα στο req.user για να τα χρησιμοποιήσεις μετά
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.status(403).json({ msg: "Invalid or expired token" });
     req.user = decoded; // { id, role }
     next();
   });
@@ -25,7 +21,7 @@ exports.verifyToken = (req, res, next) => {
 
 exports.requireRole = (role) => (req, res, next) => {
   if (!req.user || req.user.role !== role) {
-    return res.status(403).json({ msg: 'Forbidden: insufficient role' });
+    return res.status(403).json({ msg: "Forbidden: insufficient role" });
   }
   next();
 };

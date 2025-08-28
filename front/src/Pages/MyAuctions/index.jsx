@@ -3,79 +3,105 @@ import styles from "./MyAuctions.module.css";
 import { useNavigate } from "react-router-dom";
 import {
   createAuction,
-  getAllAuctions,
+  getMyAuctions,
   deleteAuction,
   updateAuction,
+  getOwnInfo,
 } from "../../axios/auth";
 import AuctionTable from "../../Components/AuctionTable";
 
 function MyAuctions() {
+  const itemsPerPage = 10;
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(1); // 1 = Active, 0 = Pending
+  const [activeTab, setActiveTab] = useState(1);
   const [auctions, setAuctions] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [lastFailedAuction, setLastFailedAuction] = useState(null);
   const [notification, setNotification] = useState({ message: "", type: "" });
-
-  const [newAuction, setNewAuction] = useState({
-    name: "",
-    firstBid: "",
-    currently: "",
-    buyPrice: "",
-    categories: "",
-    description: "",
-    latitude: "",
-    longitude: "",
-    country: "",
-    location: "",
-    starts: getLocalDateTime(),
-    ends: "",
-  });
-
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [newAuction, setNewAuction] = useState(getEmptyAuction());
 
-  // Fetch all auctions once
-  useEffect(() => {
-    const fetchAuctions = async () => {
-      try {
-        const data = await getAllAuctions();
+  /** ----------- Helpers ----------- **/
 
-        // ✅ Correct
-        const mappedAuctions = data.auctions.map((a) => ({
+  function getLocalDateTime(date = new Date()) {
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+  }
+
+  function getEmptyAuction() {
+    return {
+      id: null,
+      name: "",
+      firstBid: "",
+      buyPrice: "",
+      categories: "",
+      description: "",
+      latitude: "",
+      longitude: "",
+      country: "",
+      location: "",
+      starts: getLocalDateTime(),
+      ends: getLocalDateTime(new Date(Date.now() + 3600 * 1000)), // default 1h later
+    };
+  }
+
+  const normalizeDate = (dateStr) => {
+    if (!dateStr) return null;
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) return dateStr;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateStr))
+      return dateStr.replace("T", " ") + ":00";
+    return new Date(dateStr).toISOString().slice(0, 19).replace("T", " ");
+  };
+
+  const notify = (message, type = "error") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+  };
+
+  /** ----------- Fetch Auctions ----------- **/
+  const fetchAuctions = async () => {
+    try {
+      const data = await getMyAuctions();
+      const user = await getOwnInfo();
+      const mappedAuctions = data.auctions
+        .map((a) => ({
           id: a.id,
           name: a.name,
           categories: a.categories || [],
-          firstBid: a.first_bid,
-          currently: a.currently || a.first_bid,
-          buyPrice: a.buy_price,
-          numberOfBids: a.bid_count || 0,
+          firstBid: a.first_bid ?? "",
+          currently: a.currently ?? a.first_bid,
+          buyPrice: a.buy_price ?? "",
+          numberOfBids: a.bid_count ?? 0,
           starts: a.started,
           ends: a.ends,
-          seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
+          seller: { userID: a.seller_username, rating: a.seller_rating ?? 0 },
           bids: a.bids || [],
           description: a.description || "",
-          latitude: a.latitude,
-          longitude: a.longitude,
-          country: a.country,
-          location: a.location,
-        }));
+          latitude: a.latitude ?? "",
+          longitude: a.longitude ?? "",
+          country: a.country ?? "",
+          location: a.location ?? "",
+        }))
+        .filter((a) => a.seller?.userID === user.user.username);
 
-        setAuctions(mappedAuctions);
-      } catch (err) {
-        console.error("Failed to fetch auctions:", err);
-      }
-    };
+      setAuctions(mappedAuctions);
+    } catch (err) {
+      console.error("Failed to fetch auctions:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchAuctions();
   }, []);
 
-  // Handle form input changes
+  /** ----------- Handlers ----------- **/
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewAuction((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Create new auction
   const handleCreateAuction = async () => {
     const {
       name,
@@ -98,308 +124,160 @@ function MyAuctions() {
       !starts ||
       !ends ||
       !description ||
-      !(latitude || longitude || location || country) ||
       !categories
     ) {
-      setNotification({
-        message: "Please fill in all required fields.",
-        type: "error",
-      });
+      setLastFailedAuction({ ...newAuction });
       setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
-    }
-    const now = new Date();
-
-    if (new Date(starts).getTime() < now.getTime() - 60 * 1000) {
-      setNotification({
-        message: "Auction start time must be in the future.",
-        type: "error",
-      });
-      setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
+      return notify("Please fill in all required fields.");
     }
 
-    if (new Date(ends).getTime() <= new Date(starts).getTime()) {
-      setNotification({
-        message: "Auction end time must be after the start time.",
-        type: "error",
-      });
+    if (new Date(ends) <= new Date(starts)) {
+      setLastFailedAuction({ ...newAuction });
       setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
+      return notify("Auction end time must be after the start time.");
     }
 
     const payload = {
       itemName: name,
-      categories: newAuction.categories.split(",").map((c) => c.trim()),
+      categories: categories.split(",").map((c) => c.trim()),
       firstBid: parseFloat(firstBid),
       buyPrice: parseFloat(buyPrice),
-      latitude: newAuction.latitude !== "" ? parseFloat(latitude) : null,
-      longitude: newAuction.longitude !== "" ? parseFloat(longitude) : null,
-      country: newAuction.country,
-      location: newAuction.location,
-      started: starts,
-      ends: ends,
-      description: newAuction.description,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      country: country || "",
+      location: location || "",
+      started: normalizeDate(starts),
+      ends: normalizeDate(ends),
+      description,
     };
 
     try {
       const res = await createAuction(payload);
-      if (res.success) {
-        // Refresh auctions
-        const data = await getAllAuctions();
-        const mappedAuctions = data.auctions.map((a) => ({
-          id: a.id,
-          name: a.name,
-          categories: a.categories || [],
-          firstBid: a.first_bid,
-          currently: a.currently || a.first_bid,
-          buyPrice: a.buy_price,
-          numberOfBids: a.number_of_bids || 0,
-          starts: a.started,
-          ends: a.ends,
-          seller: { userID: a.seller_username, rating: a.seller_rating || 0 },
-          bids: a.bids || [],
-          description: a.description || "",
-          latitude: a.latitude,
-          longitude: a.longitude,
-          country: a.country,
-          location: a.location,
-        }));
-        setAuctions(mappedAuctions);
-        setNotification({
-          message: "Auction created successfully!",
-          type: "success",
-        });
-        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-        setNewAuction({
-          name: "",
-          firstBid: "",
-          currently: "",
-          buyPrice: "",
-          categories: "",
-          description: "",
-          latitude: "",
-          longitude: "",
-          country: "",
-          location: "",
-          starts: getLocalDateTime(),
-          ends: "",
-        });
+      if (!res.success) {
+        setLastFailedAuction({ ...newAuction });
         setShowModal(false);
-      } else {
-        setNotification({
-          message: res.msg || "Error creating auction.",
-          type: "error",
-        });
-        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+        return notify(res.msg || "Error creating auction.");
       }
+
+      await fetchAuctions();
+      setNewAuction(getEmptyAuction());
+      setShowModal(false);
+      setActiveTab(1);
+      notify("Auction created successfully!", "success");
     } catch (err) {
       console.error(err);
-      setNotification({ message: "Error creating auction.", type: "error" });
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      setLastFailedAuction({ ...newAuction });
+      setShowModal(false);
+      notify("Error creating auction.");
     }
   };
 
-  // Edit auction in frontend
-  const handleEditAuction = async () => {
+  const submitEditAuction = async () => {
     const {
+      id,
       name,
       firstBid,
       buyPrice,
-      starts,
-      ends,
+      categories,
       description,
       latitude,
       longitude,
       country,
       location,
-      categories,
+      starts,
+      ends,
     } = newAuction;
 
-    if (
-      !name ||
-      !firstBid ||
-      !buyPrice ||
-      !starts ||
-      !ends ||
-      !description ||
-      !(latitude || longitude || location || country) ||
-      !categories
-    ) {
-      setNotification({
-        message: "Please fill in all required fields.",
-        type: "error",
-      });
+    if (!id) return notify("Invalid auction ID.");
+    if (new Date(ends) <= new Date(starts)) {
+      setLastFailedAuction({ ...newAuction });
       setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
+      return notify("Auction end time must be after the start time.");
     }
 
-    if (new Date(starts).getTime() < now) {
-      setNotification({
-        message: "Auction start time must be in the future.",
-        type: "error",
-      });
-      setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
-    }
+    const payload = {
+      auctionId: id,
+      itemName: name || "",
+      categories: categories?.split(",").map((c) => c.trim()) || [],
+      firstBid: firstBid !== "" ? parseFloat(firstBid) : 0,
+      buyPrice: buyPrice !== "" ? parseFloat(buyPrice) : 0,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      country: country || "",
+      location: location || "",
+      started: normalizeDate(starts),
+      ends: normalizeDate(ends),
+      description: description || "",
+    };
 
-    if (new Date(ends).getTime() <= new Date(starts).getTime()) {
-      setNotification({
-        message: "Auction end time must be after the start time.",
-        type: "error",
-      });
-      setShowModal(false);
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-      return;
-    }
+    console.log("Updating auction with payload:", payload);
 
-    const res = await updateAuction(newAuction.id, {
-      itemName: newAuction.name,
-      description: newAuction.description,
-      starts: newAuction.starts,
-      ends: newAuction.ends,
-      buyPrice: newAuction.buyPrice,
-      categories: newAuction.categories.split(",").map((c) => c.trim()),
-      latitude: newAuction.latitude,
-      longitude: newAuction.longitude,
-      country: newAuction.country,
-      location: newAuction.location,
-      firstBid: newAuction.firstBid,
-    });
-    if (res.success) {
-      setAuctions((prev) =>
-        prev.map((a) =>
-          a.id === newAuction.id
-            ? {
-                ...newAuction,
-                categories: newAuction.categories
-                  .split(",")
-                  .map((c) => c.trim()),
-                firstBid: parseFloat(newAuction.firstBid),
-                buyPrice: parseFloat(newAuction.buyPrice),
-                numberOfBids: a.numberOfBids,
-                bids: a.bids,
-                seller: a.seller,
-              }
-            : a
-        )
-      );
-      setNotification({
-        message: "Auction updated successfully!",
-        type: "success",
-      });
-    } else {
-      setNotification({
-        message: "There was an error updating auction!",
-        type: "error",
-      });
+    try {
+      const res = await updateAuction(id, payload);
+      console.log("Auction updated:", res.data);
+      await fetchAuctions();
+      setShowModal(false);
+      setIsEditing(false);
+      notify("Auction updated successfully!", "success");
+    } catch (error) {
+      console.error("Error updating auction:", error);
+      notify("Error updating auction.");
     }
-    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-    setIsEditing(false);
-    setShowModal(false);
   };
 
   const handleDeleteAuction = async (id) => {
     const result = await deleteAuction(id);
     if (result.success) {
       setAuctions((prev) => prev.filter((a) => a.id !== id));
-      setNotification({
-        message: "Auction deleted successfully!",
-        type: "success",
-      });
+      notify("Auction deleted successfully!", "success");
     } else {
-      setNotification({ message: result.msg, type: "error" });
+      notify(result.msg, "error");
     }
-    setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
-  function getLocalDateTime() {
-    const now = new Date();
-    const bufferMinutes = 2; // ensures start time is slightly in the future
-    now.setMinutes(now.getMinutes() + bufferMinutes);
-    const offset = now.getTimezoneOffset();
-    const local = new Date(now.getTime() - offset * 60000);
-    return local.toISOString().slice(0, 16);
-  }
 
   const handleStartAuction = async (auction) => {
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    const payload = {
+      auctionId: auction.id,
+      itemName: auction.name || "",
+      firstBid: auction.firstBid !== "" ? parseFloat(auction.firstBid) : 0,
+      buyPrice: auction.buyPrice !== "" ? parseFloat(auction.buyPrice) : 0,
+      latitude: auction.latitude ? parseFloat(auction.latitude) : null,
+      longitude: auction.longitude ? parseFloat(auction.longitude) : null,
+      country: auction.country || "",
+      location: auction.location || "",
+      started: now,
+      ends: auction.ends ? normalizeDate(auction.ends) : now,
+      description: auction.description || "",
+      categories: auction.categories || [],
+    };
+
     try {
-      const updatedData = {
-        itemName: auction.name,
-        description: auction.description,
-        started: getLocalDateTime(),
-        ends: auction.ends?.slice(0, 16),
-        buyPrice: auction.buyPrice ?? 0,
-        firstBid: auction.firstBid ?? 0,
-        currently: auction.currently ?? auction.firstBid ?? 0,
-        categories: auction.categories,
-        latitude: auction.latitude,
-        longitude: auction.longitude,
-        country: auction.country,
-        location: auction.location,
-      };
-
-      const response = await updateAuction(auction.id, updatedData);
-      if (response.success) {
-        // Show notification
-        setNotification({
-          message: `Auction "${auction.name}" started successfully!`,
-          type: "success",
-        });
-        setTimeout(() => setNotification({ message: "", type: "" }), 3000);
-
-        const nowISO = new Date().toISOString().slice(0, 16);
-        // Move auction to active instantly
-        setAuctions((prev) =>
-          prev.map((a) =>
-            a.id === auction.id
-              ? { ...a, starts: nowISO, currently: updatedData.currently ?? 0 }
-              : a
-          )
-        );
-
-        // Switch to Active tab automatically
-        setActiveTab(1);
-      }
-    } catch (error) {
-      console.error("Error starting auction:", error);
-      setNotification({
-        message: `Error starting auction "${auction.name}".`,
-        type: "error",
-      });
-      setTimeout(() => setNotification({ message: "", type: "" }), 3000);
+      await updateAuction(auction.id, payload);
+      await fetchAuctions();
+      setActiveTab(1);
+      notify("Auction started successfully!", "success");
+    } catch (err) {
+      console.error("Error starting auction:", err);
+      notify("Error starting auction.", "error");
     }
   };
 
-  // Filter and paginate auctions
-  const now = new Date();
-
+  /** ----------- UI ----------- **/
   const filteredAuctions = auctions.filter((a) => {
     const startDate = new Date(a.starts);
     const endDate = new Date(a.ends);
+    const now = new Date();
 
-    if (activeTab === 1) {
-      // Active: started <= now AND ends > now
-      return (
-        startDate.getTime() <= now.getTime() &&
-        endDate.getTime() > now.getTime()
-      );
-    } else if (activeTab === 0) {
-      // Pending: starts in the future
-      return startDate.getTime() > now.getTime();
-    } else if (activeTab === 3) {
-      // Completed: already ended
-      return endDate.getTime() <= now.getTime();
-    }
+    if (activeTab === 1) return startDate <= now && endDate > now; // Active
+    if (activeTab === 0) return startDate > now; // Pending
+    if (activeTab === 3) return endDate <= now; // Completed
+    if (activeTab === 4) return endDate <= now && a.numberOfBids > 0; // Sold
     return false;
   });
 
   const totalPages = Math.ceil(filteredAuctions.length / itemsPerPage);
-
   const paginatedAuctions = filteredAuctions.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -418,26 +296,13 @@ function MyAuctions() {
         className={styles.newAuctionBtn}
         onClick={() => {
           setShowModal(true);
-          // Reset newAuction and refresh start date
-          setNewAuction({
-            name: "",
-            firstBid: "",
-            currently: "",
-            buyPrice: "",
-            categories: "",
-            description: "",
-            latitude: "",
-            longitude: "",
-            country: "",
-            location: "",
-            starts: getLocalDateTime(), // Refresh to current time
-            ends: "",
-          });
-          setIsEditing(false); // ensure editing mode is off
+          setIsEditing(false);
+          setNewAuction(lastFailedAuction || getEmptyAuction());
         }}
       >
         + New Auction
       </button>
+
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
@@ -447,76 +312,78 @@ function MyAuctions() {
               type="text"
               name="name"
               placeholder="Auction Name"
-              value={newAuction.name}
+              value={newAuction.name ?? ""}
               onChange={handleInputChange}
             />
             <input
               type="number"
               name="firstBid"
               placeholder="First Bid"
-              value={newAuction.firstBid}
+              value={newAuction.firstBid ?? ""}
               onChange={handleInputChange}
             />
             <input
               type="number"
               name="buyPrice"
               placeholder="Buy Price"
-              value={newAuction.buyPrice}
+              value={newAuction.buyPrice ?? ""}
               onChange={handleInputChange}
             />
             <label>Start Date and Time</label>
             <input
               type="datetime-local"
               name="starts"
-              value={newAuction.starts}
+              value={newAuction.starts ?? ""}
               onChange={handleInputChange}
             />
             <label>End Date and Time</label>
             <input
               type="datetime-local"
               name="ends"
-              value={newAuction.ends}
+              value={newAuction.ends ?? ""}
               onChange={handleInputChange}
             />
             <input
               type="text"
               name="categories"
               placeholder="Categories (comma separated)"
-              value={newAuction.categories}
-              onChange={handleInputChange}
-            />
-            <input
-              type="text"
-              name="latitude"
-              placeholder="Latitude"
-              value={newAuction.latitude}
-              onChange={handleInputChange}
-            />
-            <input
-              type="text"
-              name="longitude"
-              placeholder="Longitude "
-              value={newAuction.longitude}
+              value={newAuction.categories ?? ""}
               onChange={handleInputChange}
             />
             <input
               type="text"
               name="country"
-              placeholder="Country "
-              value={newAuction.country}
+              placeholder="Country"
+              value={newAuction.country ?? ""}
               onChange={handleInputChange}
             />
             <input
               type="text"
               name="location"
-              placeholder="Location "
-              value={newAuction.location}
+              placeholder="City / Location"
+              value={newAuction.location ?? ""}
+              onChange={handleInputChange}
+            />
+            <input
+              type="number"
+              step="any"
+              name="latitude"
+              placeholder="Latitude"
+              value={newAuction.latitude ?? ""}
+              onChange={handleInputChange}
+            />
+            <input
+              type="number"
+              step="any"
+              name="longitude"
+              placeholder="Longitude"
+              value={newAuction.longitude ?? ""}
               onChange={handleInputChange}
             />
             <textarea
               name="description"
               placeholder="Description"
-              value={newAuction.description}
+              value={newAuction.description ?? ""}
               onChange={handleInputChange}
             />
 
@@ -524,7 +391,7 @@ function MyAuctions() {
               {isEditing ? (
                 <button
                   className={styles.createBtn}
-                  onClick={handleEditAuction}
+                  onClick={submitEditAuction}
                 >
                   Save Changes
                 </button>
@@ -541,6 +408,7 @@ function MyAuctions() {
                 onClick={() => {
                   setShowModal(false);
                   setIsEditing(false);
+                  setNewAuction(getEmptyAuction());
                 }}
               >
                 Cancel
@@ -550,13 +418,13 @@ function MyAuctions() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs & Table */}
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${activeTab === 1 ? styles.activeTab : ""}`}
           onClick={() => {
             setActiveTab(1);
-            setCurrentPage(1); // reset
+            setCurrentPage(1);
           }}
         >
           Active
@@ -565,7 +433,7 @@ function MyAuctions() {
           className={`${styles.tab} ${activeTab === 0 ? styles.activeTab : ""}`}
           onClick={() => {
             setActiveTab(0);
-            setCurrentPage(1); // reset
+            setCurrentPage(1);
           }}
         >
           Pending
@@ -574,14 +442,22 @@ function MyAuctions() {
           className={`${styles.tab} ${activeTab === 3 ? styles.activeTab : ""}`}
           onClick={() => {
             setActiveTab(3);
-            setCurrentPage(1); // reset
+            setCurrentPage(1);
           }}
         >
           Completed
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === 4 ? styles.activeTab : ""}`}
+          onClick={() => {
+            setActiveTab(4);
+            setCurrentPage(1);
+          }}
+        >
+          Sold
+        </button>
       </div>
 
-      {/* Notifications */}
       {notification.message && (
         <div
           className={`${styles.notification} ${
@@ -592,35 +468,31 @@ function MyAuctions() {
         </div>
       )}
 
-      {/* Auctions Table */}
       <AuctionTable
         auctions={paginatedAuctions}
         onEdit={(auction) => {
           setIsEditing(true);
           setShowModal(true);
-
           setNewAuction({
             id: auction.id,
-            name: auction.name,
-            firstBid: auction.firstBid,
-            buyPrice: auction.buyPrice,
-            categories: auction.categories.join(", "),
-            description: auction.description,
-            latitude: auction.latitude,
-            longitude: auction.longitude,
-            country: auction.country,
-            location: auction.location,
-            starts: new Date(auction.starts).toISOString().slice(0, 16),
-            ends: new Date(auction.ends).toISOString().slice(0, 16),
+            name: auction.name ?? "",
+            firstBid: auction.firstBid ?? "",
+            buyPrice: auction.buyPrice ?? "",
+            categories: auction.categories?.join(", ") ?? "",
+            description: auction.description ?? "",
+            latitude: auction.latitude ?? "",
+            longitude: auction.longitude ?? "",
+            country: auction.country ?? "",
+            location: auction.location ?? "",
+            starts: getLocalDateTime(new Date(auction.starts)),
+            ends: getLocalDateTime(new Date(auction.ends)),
           });
         }}
         onDelete={handleDeleteAuction}
-        onStart={handleStartAuction}
-        onBids={() => navigate("/bids")}
+        onStart={(id) => handleStartAuction(id)}
         onInfo={(id) => navigate(`/my-auctions/${id}`)}
       />
 
-      {/* Pagination */}
       <div className={styles.pagination}>
         <button
           disabled={currentPage === 1}
@@ -629,10 +501,10 @@ function MyAuctions() {
           Prev
         </button>
         <span>
-          {currentPage} / {totalPages}
+          {totalPages > 0 ? `${currentPage} / ${totalPages}` : "0 / 0"}
         </span>
         <button
-          disabled={currentPage === totalPages}
+          disabled={currentPage === totalPages || totalPages === 0}
           onClick={() => setCurrentPage((p) => p + 1)}
         >
           Next
@@ -641,4 +513,5 @@ function MyAuctions() {
     </div>
   );
 }
+
 export default MyAuctions;

@@ -348,3 +348,27 @@ export async function getWonAuctions() {
   });
   return res.data;
 }
+
+// Get auctions created by the logged-in user
+export async function getMyAuctions() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  try {
+    const res = await axios.get("http://localhost:5000/api/auctions/mine", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return {
+      success: true,
+      auctions: res.data.auctions,
+      total: res.data.total,
+    };
+  } catch (err) {
+    console.error("Error fetching my auctions:", err);
+    return {
+      success: false,
+      msg: err.response?.data?.msg || "Error fetching my auctions",
+    };
+  }
+}

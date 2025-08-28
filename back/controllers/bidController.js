@@ -17,7 +17,7 @@ exports.placeBid = (req, res) => {
   db.query(itemQuery, [itemId], (err, results) => {
     if (err) return res.status(500).json({ msg: "DB error", err });
     if (results.length === 0)
-      return res.status(404).json({ msg: "Auction not found" });
+      return res.status(404).json({ msg: "Bid controller: Auction not found" });
 
     const item = results[0];
     const now = new Date();

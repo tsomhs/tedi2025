@@ -6,7 +6,7 @@
   background: linear-gradient(135deg, #86e7c2, #60e0bc);
   min-height: 100vh;
   width: 100vw;
-  padding: 2rem 1rem; /* small padding around page */
+  padding: 2rem 5rem; /* small padding around page */
   box-sizing: border-box;
 }
 
@@ -14,7 +14,8 @@
   display: flex;
   gap: 2rem; /* space between left card and right column */
   width: 100%;
-  max-width: 1400px;
+
+  margin-top: 3rem;
   box-sizing: border-box;
 }
 
@@ -31,7 +32,6 @@
   color: #06e94a;
   transform: translateX(-3px);
 }
-
 .card {
   background-color: #d7eceb;
   margin: 2rem;
@@ -39,6 +39,8 @@
   border-radius: 20px;
   max-width: 700px;
   width: 100%;
+  max-height: 90vh; /* <-- limit height */
+  overflow-y: auto; /* <-- scroll if content exceeds */
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
@@ -83,6 +85,12 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.actionButtons {
+  width: 30%;
+  display: flex;
+  justify-content: space-around;
+}
+
 .bidButton {
   background-color: #9c27b0;
   color: white;
@@ -94,6 +102,19 @@
 }
 .bidButton:hover {
   background-color: #7b1fa2;
+}
+
+.buyButton {
+  background-color: #e74c3c;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+.buyButton:hover {
+  background-color: #c94435;
 }
 
 /* Right Column (winner + bids + map) */

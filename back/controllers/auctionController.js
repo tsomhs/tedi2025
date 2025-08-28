@@ -2,15 +2,35 @@
 
 const db = require("../config/db");
 
-// Δημιουργία νέας δημοπρασίας
+const safeFloat = (value) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? null : num;
+};
+
+const formatDateForMySQL = (dt) => {
+  if (!dt) return null;
+  if (dt instanceof Date) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(
+      dt.getDate()
+    )} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+  }
+
+  let clean = dt.replace("T", " ").replace(/:{2,}$/, "");
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(clean)) clean += ":00";
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(clean)) return null;
+  return clean;
+};
+
+// --- Create Auction ---
 exports.createAuction = (req, res) => {
-  const userId = req.user?.id;
-  const { role } = req.user || {};
-  console.log("Decoded user in createAuction:", req.user);
+  const { id: userId, role } = req.user || {};
+  if (role !== "seller")
+    return res.status(403).json({ msg: "Only sellers can create auctions" });
 
   const {
     itemName,
-    categories,
+    categories = [],
     firstBid,
     buyPrice,
     latitude,
@@ -22,39 +42,27 @@ exports.createAuction = (req, res) => {
     description,
   } = req.body;
 
-  // Έλεγχος αν ο χρήστης είναι seller
-  if (role !== "seller") {
-    return res.status(403).json({ msg: "Only sellers can create auctions" });
-  }
-
-  if (!itemName || !firstBid || !started || !ends) {
+  if (!itemName || !firstBid || !started || !ends)
     return res.status(400).json({ msg: "Missing required fields" });
-  }
 
-  // Convert ISO date strings to MySQL DATETIME format
-  const startedFormatted = started.replace("T", " ") + ":00";
-  const endsFormatted = ends.replace("T", " ") + ":00";
+  const startedFormatted = formatDateForMySQL(started);
+  const endsFormatted = formatDateForMySQL(ends);
+
   const itemQuery = `
-  INSERT INTO items
-    (name, first_bid, currently, buy_price, latitude, longitude, country, location, started, ends, status, seller_id, description, sold, winner_id)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)
-`;
+    INSERT INTO items
+      (name, first_bid, currently, buy_price, latitude, longitude, country, location, started, ends, status, seller_id, description, sold, winner_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)
+  `;
 
   db.query(
     itemQuery,
     [
       itemName,
-      parseFloat(firstBid),
-      parseFloat(firstBid),
-      buyPrice !== "" && !isNaN(parseFloat(buyPrice))
-        ? parseFloat(buyPrice)
-        : null,
-      latitude !== "" && !isNaN(parseFloat(latitude))
-        ? parseFloat(latitude)
-        : null,
-      longitude !== "" && !isNaN(parseFloat(longitude))
-        ? parseFloat(longitude)
-        : null,
+      safeFloat(firstBid),
+      safeFloat(firstBid),
+      safeFloat(buyPrice),
+      safeFloat(latitude),
+      safeFloat(longitude),
       country || null,
       location || null,
       startedFormatted,
@@ -64,95 +72,141 @@ exports.createAuction = (req, res) => {
       description,
     ],
     (err, result) => {
-      if (err) {
-        console.error("Error inserting item:", err);
+      if (err)
         return res.status(500).json({ msg: "DB error creating item", err });
-      }
       const itemId = result.insertId;
 
-      // Handle categories
-      const cats = Array.isArray(categories) ? categories : [];
-      if (cats.length === 0) {
+      if (!categories.length)
         return res.json({
           success: true,
-          msg: "Auction created successfully",
-          data: {
-            id: itemId,
-            name: itemName,
-            firstBid: parseFloat(firstBid),
-            buyPrice: buyPrice ? parseFloat(buyPrice) : null,
-            latitude: latitude,
-            longitude: longitude,
-            country: country,
-            location: location,
-            started: startedFormatted,
-            ends: endsFormatted,
-            description,
-            status: 0,
-            seller: { userID: req.user.username, rating: 0 },
-            categories: [],
-            numberOfBids: 0,
-            bids: [],
-          },
+          msg: "Auction created",
+          data: { id: itemId },
         });
-      }
 
       // Insert categories
-      let remaining = cats.length;
-      const insertedCategories = [];
-
-      cats.forEach((cat) => {
-        db.query(
-          "INSERT INTO item_categories (item_id, category_name) VALUES (?, ?)",
-          [itemId, cat],
-          (e) => {
-            if (e) {
-              console.error("Error inserting category:", e);
-              return res
-                .status(500)
-                .json({ msg: "Error assigning categories", err: e });
-            }
-            insertedCategories.push(cat);
-            remaining -= 1;
-            if (remaining === 0) {
-              res.json({
-                success: true,
-                msg: "Auction created successfully",
-                data: {
-                  id: itemId,
-                  name: itemName,
-                  firstBid: parseFloat(firstBid),
-                  buyPrice: buyPrice ? parseFloat(buyPrice) : null,
-                  latitude: latitude !== "" ? parseFloat(latitude) : null,
-                  longitude: longitude !== "" ? parseFloat(longitude) : null,
-                  country: country || null,
-                  location: location || null,
-                  started: startedFormatted,
-                  ends: endsFormatted,
-                  description,
-                  status: 0,
-                  seller: { userID: req.user.username, rating: 0 },
-                  categories: insertedCategories,
-                  numberOfBids: 0,
-                  bids: [],
-                },
-              });
-            }
-          }
-        );
-      });
+      const catValues = categories.map((c) => [itemId, c]);
+      db.query(
+        "INSERT INTO item_categories (item_id, category_name) VALUES ?",
+        [catValues],
+        (catErr) => {
+          if (catErr)
+            return res
+              .status(500)
+              .json({ msg: "Error assigning categories", err: catErr });
+          res.json({
+            success: true,
+            msg: "Auction created",
+            data: { id: itemId, categories },
+          });
+        }
+      );
     }
   );
 };
+
+// --- Update Auction ---
+exports.updateAuction = (req, res) => {
+  const { id: userId, role } = req.user || {};
+  if (role !== "seller")
+    return res.status(403).json({ msg: "Only sellers can update auctions" });
+
+  const {
+    auctionId,
+    itemName,
+    categories = [],
+    firstBid,
+    buyPrice,
+    latitude,
+    longitude,
+    country,
+    location,
+    started,
+    ends,
+    description,
+  } = req.body;
+
+  if (!auctionId || !itemName || !firstBid || !started || !ends)
+    return res.status(400).json({ msg: "Missing required fields" });
+
+  const startedFormatted = formatDateForMySQL(started);
+  const endsFormatted = formatDateForMySQL(ends);
+
+  const updateQuery = `
+    UPDATE items SET
+      name = ?, description = ?, started = ?, ends = ?,
+      buy_price = ?, first_bid = ?, currently = ?, latitude = ?, longitude = ?, country = ?, location = ?
+    WHERE id = ? AND seller_id = ?
+  `;
+
+  db.query(
+    updateQuery,
+    [
+      itemName,
+      description,
+      startedFormatted,
+      endsFormatted,
+      safeFloat(buyPrice),
+      safeFloat(firstBid),
+      safeFloat(firstBid),
+      safeFloat(latitude),
+      safeFloat(longitude),
+      country || null,
+      location || null,
+      auctionId,
+      userId,
+    ],
+    (err) => {
+      if (err)
+        return res.status(500).json({ msg: "DB error updating item", err });
+
+      // Update categories
+      db.query(
+        "DELETE FROM item_categories WHERE item_id = ?",
+        [auctionId],
+        (delErr) => {
+          if (delErr)
+            return res
+              .status(500)
+              .json({ msg: "Error clearing old categories", err: delErr });
+          if (!categories.length)
+            return res.json({
+              success: true,
+              msg: "Auction updated",
+              data: { id: auctionId },
+            });
+
+          const catValues = categories.map((c) => [auctionId, c]);
+          db.query(
+            "INSERT INTO item_categories (item_id, category_name) VALUES ?",
+            [catValues],
+            (catErr) => {
+              if (catErr)
+                return res
+                  .status(500)
+                  .json({ msg: "Error assigning categories", err: catErr });
+              res.json({
+                success: true,
+                msg: "Auction updated",
+                data: { id: auctionId, categories },
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+};
+
 // Προβολή δημοπρασίας
 exports.getAuctionById = (req, res) => {
   const auctionId = req.params.id;
 
   const query = `
-    SELECT i.*, u.username AS seller_username
+    SELECT i.*, u.id AS seller_id, u.username AS seller_username
     FROM items i
-    JOIN users u ON i.seller_id = u.id
-    WHERE i.id = ?`;
+    LEFT JOIN users u ON i.seller_id = u.id
+    WHERE i.id = ?
+  `;
 
   db.query(query, [auctionId], (err, results) => {
     if (err) return res.status(500).json({ msg: "DB error", err });
@@ -161,7 +215,6 @@ exports.getAuctionById = (req, res) => {
 
     const item = results[0];
 
-    // Παίρνουμε και τις κατηγορίες
     db.query(
       "SELECT category_name FROM item_categories WHERE item_id = ?",
       [auctionId],
@@ -171,15 +224,24 @@ exports.getAuctionById = (req, res) => {
 
         item.categories = categories.map((c) => c.category_name);
 
-        // Έλεγχος αν η δημοπρασία έχει λήξει
+        // ends is already string (because of dateStrings:true), safe for compare
         const now = new Date();
-        const ends = new Date(item.ends);
-        item.sold = ends <= now;
+        const endsDate = new Date(item.ends);
+        item.sold = endsDate <= now;
+
+        const sendResponse = () => {
+          res.json({
+            ...item,
+            seller: { id: item.seller_id, username: item.seller_username },
+            location: item.location,
+            categories: item.categories,
+            winner: item.winner || null,
+          });
+        };
 
         if (item.sold) {
-          // Παίρνουμε τον νικητή (αν υπάρχει)
           const bidQuery = `
-            SELECT b.*, u.username, u.buyer_rating AS rating
+            SELECT b.*, u.id AS bidder_id, u.username, u.buyer_rating AS rating
             FROM bids b
             JOIN users u ON b.bidder_id = u.id
             WHERE b.item_id = ?
@@ -191,160 +253,32 @@ exports.getAuctionById = (req, res) => {
               return res
                 .status(500)
                 .json({ msg: "Error fetching winner", err });
-
             item.winner = bids.length > 0 ? bids[0] : null;
-            res.json({
-              ...item,
-              location: item.location, // already handled in create/update
-              categories: categories.map((c) => c.category_name),
-            });
+            sendResponse();
           });
         } else {
           item.winner = null;
-          res.json({
-            ...item,
-            location: item.location, // already handled in create/update
-            categories: categories.map((c) => c.category_name),
-          });
+          sendResponse();
         }
       }
     );
   });
 };
 
-exports.updateAuction = (req, res) => {
-  const itemId = req.params.id;
-  const userId = req.user.id;
-
-  const {
-    itemName,
-    description,
-    started: newStart,
-    ends,
-    buyPrice,
-    categories,
-    latitude,
-    longitude,
-    country,
-    location,
-    firstBid,
-  } = req.body;
-
-  const checkQuery = "SELECT * FROM items WHERE id = ?";
-  db.query(checkQuery, [itemId], (err, results) => {
-    if (err) return res.status(500).json({ msg: "DB error", err });
-    if (results.length === 0)
-      return res.status(404).json({ msg: "Auction not found" });
-
-    const item = results[0];
-    if (item.seller_id !== userId && req.user.role !== "admin") {
-      return res.status(403).json({ msg: "Unauthorized" });
-    }
-
-    const now = new Date();
-    if (new Date(item.started) <= now) {
-      return res.status(400).json({ msg: "Auction already started" });
-    }
-
-    // Cannot update if bids exist
-    db.query(
-      "SELECT COUNT(*) AS bidCount FROM bids WHERE item_id = ?",
-      [itemId],
-      (err, bidResults) => {
-        if (err)
-          return res.status(500).json({ msg: "Error checking bids", err });
-        if (bidResults[0].bidCount > 0) {
-          return res
-            .status(400)
-            .json({ msg: "Cannot update. Auction already has bids." });
-        }
-
-        const startedStr = newStart
-          ? new Date(newStart).toISOString().slice(0, 19).replace("T", " ")
-          : item.started;
-
-        const endsStr = ends
-          ? new Date(ends).toISOString().slice(0, 19).replace("T", " ")
-          : item.ends;
-
-        const updateQuery = `
-          UPDATE items SET
-            name = ?,
-            description = ?,
-            started = ?,
-            ends = ?,
-            buy_price = ?,
-            first_bid = ?,
-            latitude = ?,
-            longitude = ?,
-            country = ?,
-            location = ?
-          WHERE id = ?
-        `;
-
-        db.query(
-          updateQuery,
-          [
-            itemName,
-            description,
-            startedStr,
-            endsStr,
-            buyPrice ? parseFloat(buyPrice) : null,
-            firstBid ? parseFloat(firstBid) : null,
-            latitude !== "" ? parseFloat(latitude) : null,
-            longitude !== "" ? parseFloat(longitude) : null,
-            country || null,
-            location || null,
-            itemId,
-          ],
-          (err) => {
-            if (err) return res.status(500).json({ msg: "Update failed", err });
-
-            // Update categories if provided
-            if (Array.isArray(categories)) {
-              // First delete old categories
-              db.query(
-                "DELETE FROM item_categories WHERE item_id = ?",
-                [itemId],
-                (err) => {
-                  if (err) console.error("Error deleting old categories", err);
-
-                  // Insert new categories
-                  if (categories.length === 0) {
-                    return res.json({
-                      success: true,
-                      msg: "Auction updated successfully",
-                    });
-                  }
-
-                  let remaining = categories.length;
-                  categories.forEach((cat) => {
-                    db.query(
-                      "INSERT INTO item_categories (item_id, category_name) VALUES (?, ?)",
-                      [itemId, cat],
-                      (err) => {
-                        if (err) console.error("Error inserting category", err);
-                        remaining -= 1;
-                        if (remaining === 0) {
-                          res.json({
-                            success: true,
-                            msg: "Auction updated successfully",
-                          });
-                        }
-                      }
-                    );
-                  });
-                }
-              );
-            } else {
-              // No categories update needed
-              res.json({ success: true, msg: "Auction updated successfully" });
-            }
-          }
-        );
-      }
+exports.getActiveAuctions = async (req, res) => {
+  try {
+    const [results] = await db.promise().query(
+      `SELECT i.*, u.username AS seller_username
+       FROM items i
+       JOIN users u ON i.seller_id = u.id
+       WHERE NOW() BETWEEN i.started AND i.ends
+       ORDER BY i.ends ASC`
     );
-  });
+    res.json(results);
+  } catch (err) {
+    console.error("Error fetching active auctions:", err);
+    res.status(500).json({ msg: "DB error", err });
+  }
 };
 
 // Διαγραφή δημοπρασίας
@@ -363,7 +297,7 @@ exports.deleteAuction = (req, res) => {
   db.query("SELECT * FROM items WHERE id = ?", [itemId], (err, results) => {
     if (err) return res.status(500).json({ msg: "DB error", err });
     if (results.length === 0)
-      return res.status(404).json({ msg: "Auction not found" });
+      return res.status(404).json({ msg: "Auction not found 2" });
 
     const item = results[0];
     if (item.seller_id !== userId && req.user.role !== "admin") {
@@ -454,36 +388,16 @@ exports.searchAuctions = (req, res) => {
   });
 };
 
-// Προβολή όλων των ενεργών δημοπρασιών
-exports.getActiveAuctions = (req, res) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-
-  const query = `
-    SELECT i.*, u.username AS seller_username
-    FROM items i
-    JOIN users u ON i.seller_id = u.id
-    WHERE NOW() BETWEEN i.started AND i.ends
-    ORDER BY i.ends ASC
-    LIMIT ?, ?`;
-
-  db.query(query, [offset, limit], (err, results) => {
-    if (err) return res.status(500).json({ msg: "DB error", err });
-
-    res.json({ auctions: results, page, limit });
-  });
-};
-
 // Προβολή όλων των δημοπρασιών (χωρίς σελιδοποίηση)
 exports.getAllAuctions = async (req, res) => {
   try {
     const [results] = await db.promise().query(`
       SELECT i.*, 
+             u.id AS seller_id,
              u.username AS seller_username,
              (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count
       FROM items i
-      JOIN users u ON i.seller_id = u.id
+      LEFT JOIN users u ON i.seller_id = u.id
       ORDER BY i.started DESC
     `);
 
@@ -499,8 +413,12 @@ exports.getAllAuctions = async (req, res) => {
 
         return {
           ...item,
+          seller: {
+            id: item.seller_id,
+            username: item.seller_username,
+          },
           categories: cats.map((c) => c.category_name),
-          location: item.location, // include location
+          location: item.location,
         };
       })
     );
@@ -526,7 +444,7 @@ exports.buyNow = (req, res) => {
   db.query(query, [auctionId], (err, results) => {
     if (err) return res.status(500).json({ msg: "DB error", err });
     if (results.length === 0)
-      return res.status(404).json({ msg: "Auction not found" });
+      return res.status(404).json({ msg: "Auction not found 3" });
 
     const auction = results[0];
 
@@ -580,5 +498,45 @@ exports.getWonAuctions = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching won auctions", error: err.message });
+  }
+};
+
+exports.getUserAuctions = async (req, res) => {
+  try {
+    // req.user is set by verifyToken
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(400).json({ msg: "User ID missing in token" });
+    }
+
+    // Fetch auctions for this user, including categories
+    const [auctions] = await db.promise().query(
+      `SELECT i.*, 
+              u.username AS seller_username,
+              (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count,
+              GROUP_CONCAT(ic.category_name) AS categories
+       FROM items i
+       JOIN users u ON i.seller_id = u.id
+       LEFT JOIN item_categories ic ON i.id = ic.item_id
+       WHERE i.seller_id = ?
+       GROUP BY i.id`,
+      [userId]
+    );
+
+    // Convert categories string into array
+    const formattedAuctions = auctions.map((a) => ({
+      ...a,
+      categories: a.categories ? a.categories.split(",") : [],
+    }));
+
+    return res.json({
+      success: true,
+      auctions: formattedAuctions,
+      total: formattedAuctions.length,
+    });
+  } catch (err) {
+    console.error("Error in getUserAuctions:", err);
+    return res.status(500).json({ msg: "Server error fetching your auctions" });
   }
 };

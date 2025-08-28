@@ -4,7 +4,6 @@ import {
   getAllAuctions,
   getUserRole,
   getOwnInfo,
-  getUserById,
   placeBid,
 } from "../../axios/auth";
 import styles from "./Browse.module.css";
@@ -19,8 +18,9 @@ function BrowseAuctions() {
   const itemsPerPage = 10;
   const [role, setRole] = useState("");
   const [userId, setUserId] = useState(null);
+  const [tab, setTab] = useState("active"); // "active" or "completed"
 
-  // modal
+  // Modal state
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [currentAuction, setCurrentAuction] = useState(null);
@@ -28,15 +28,15 @@ function BrowseAuctions() {
 
   const [loading, setLoading] = useState(true);
 
-  // φίλτρα
+  // Filters
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
 
-  // user info
+  // Fetch user info
   useEffect(() => {
     const fetchUser = async () => {
       const roleRes = await getUserRole();
@@ -47,22 +47,16 @@ function BrowseAuctions() {
     fetchUser();
   }, []);
 
-  // fetch auctions
+  // Fetch auctions
   useEffect(() => {
     const fetchAuctions = async () => {
       setLoading(true);
       try {
         const data = await getAllAuctions();
+        const user = await getOwnInfo();
 
-        const now = new Date();
-
-        const mappedPromises = data.auctions.map(async (a) => {
-          const sellerRes = await getUserById(a.seller_id);
-          const sellerName = sellerRes.success
-            ? sellerRes.user.username
-            : "Unknown";
-
-          return {
+        const mapped = data.auctions
+          .map((a) => ({
             id: a.id,
             name: a.name,
             categories: a.categories || [],
@@ -74,57 +68,57 @@ function BrowseAuctions() {
             ends: a.ends,
             seller: {
               id: a.seller_id,
-              username: sellerName,
-              rating: a.seller_rating || 0,
+              username: a.seller_username || "Unknown",
             },
-            bids: a.bids || [],
             description: a.description || "",
-            latitude: a.latitude,
-            longitude: a.longitude,
             country: a.country,
             location: a.location,
-          };
-        });
+          }))
+          .filter(
+            (a) =>
+              a.seller?.userID !== user.user.username &&
+              a.seller.id !== user.user.id
+          );
 
-        const mapped = await Promise.all(mappedPromises);
-
-        const filtered = mapped.filter(
-          (a) =>
-            now >= new Date(a.starts) &&
-            now <= new Date(a.ends) &&
-            a.seller.id !== userId
-        );
-
-        setAllAuctions(filtered);
-        setAuctions(filtered);
-
-        const allCategories = new Set();
-        filtered.forEach((a) =>
-          a.categories.forEach((c) => allCategories.add(c))
-        );
-        setCategories(["All", ...Array.from(allCategories)]);
+        setAllAuctions(mapped);
       } catch (err) {
         console.error("Failed to load auctions:", err);
       } finally {
         setLoading(false);
       }
     };
-
     if (userId) fetchAuctions();
   }, [userId]);
 
-  // ---- apply filters ----
+  // Calculate counts for tabs
+  const now = new Date();
+  const activeCount = allAuctions.filter(
+    (a) => now >= new Date(a.starts) && now <= new Date(a.ends)
+  ).length;
+  const completedCount = allAuctions.filter(
+    (a) => now > new Date(a.ends)
+  ).length;
+
+  // Apply filters and tab
   useEffect(() => {
     let filtered = [...allAuctions];
 
-    // category
-    if (selectedCategory !== "All") {
+    // Tab filter
+    filtered = filtered.filter((a) =>
+      tab === "active"
+        ? now >= new Date(a.starts) && now <= new Date(a.ends)
+        : now > new Date(a.ends)
+    );
+
+    // Category filter
+    if (selectedCategory.trim() !== "") {
+      const catTerm = selectedCategory.toLowerCase();
       filtered = filtered.filter((a) =>
-        a.categories.includes(selectedCategory)
+        a.categories.some((c) => c.toLowerCase().includes(catTerm))
       );
     }
 
-    // search term
+    // Search term filter
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -133,20 +127,16 @@ function BrowseAuctions() {
           a.description.toLowerCase().includes(term)
       );
     }
-
-    // price range
-    if (minPrice !== "") {
+    // Price filters
+    if (minPrice !== "")
       filtered = filtered.filter(
         (a) => parseFloat(a.currently) >= parseFloat(minPrice)
       );
-    }
-    if (maxPrice !== "") {
+    if (maxPrice !== "")
       filtered = filtered.filter(
         (a) => parseFloat(a.currently) <= parseFloat(maxPrice)
       );
-    }
-
-    // location
+    // Location filter
     if (locationSearch.trim() !== "") {
       const loc = locationSearch.toLowerCase();
       filtered = filtered.filter(
@@ -157,24 +147,25 @@ function BrowseAuctions() {
     }
 
     setAuctions(filtered);
-    setCurrentPage(1); // reset pagination on filter change
+    setCurrentPage(1);
   }, [
+    allAuctions,
+    tab,
     selectedCategory,
     searchTerm,
     minPrice,
     maxPrice,
     locationSearch,
-    allAuctions,
   ]);
 
-  // pagination
+  // Pagination
   const totalPages = Math.ceil(auctions.length / itemsPerPage);
   const paginated = auctions.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // bid modal
+  // Bid modal handlers
   const handleOpenBid = (auction) => {
     setBidError("");
     setCurrentAuction(auction);
@@ -196,7 +187,6 @@ function BrowseAuctions() {
       );
       return;
     }
-
     if (buyPrice && bidValue >= buyPrice) {
       handleBuy(currentAuction);
       handleCloseBid();
@@ -209,27 +199,20 @@ function BrowseAuctions() {
     if (!confirmBid) return;
 
     const result = await placeBid(currentAuction.id, bidValue);
-
     if (result.success) {
       alert(result.msg);
-
-      // ✅ increment numberOfBids locally
       const updatedAuction = {
         ...currentAuction,
         currently: bidValue,
         numberOfBids: (currentAuction.numberOfBids || 0) + 1,
       };
-
       setCurrentAuction(updatedAuction);
-
       setAuctions((prev) =>
         prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
       );
-
       setAllAuctions((prev) =>
         prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
       );
-
       handleCloseBid();
       setBidError("");
     } else {
@@ -237,22 +220,18 @@ function BrowseAuctions() {
     }
   };
 
-  // buy now
   const handleBuy = (auction) => {
     const confirmBuy = window.confirm(
-      `Are you sure you want to Buy Now "${auction.name}" for $${auction.buyPrice}?`
+      `Buy "${auction.name}" for $${auction.buyPrice}?`
     );
     if (!confirmBuy) return;
 
     const token = localStorage.getItem("token");
-
     axios
       .post(
         `http://localhost:5000/api/auctions/buy/${auction.id}`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       .then((res) => {
         alert(res.data.msg);
@@ -264,7 +243,6 @@ function BrowseAuctions() {
         alert(err.response?.data?.msg || "Error processing Buy Now");
       });
   };
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -276,7 +254,7 @@ function BrowseAuctions() {
         </span>
         <div className={styles.headerContent}>
           <h1>Browse Auctions</h1>
-          {role != "visitor" && (
+          {role !== "visitor" && (
             <button
               className={styles.myAuctionsBtn}
               onClick={() => navigate("/auctions-bought")}
@@ -287,23 +265,39 @@ function BrowseAuctions() {
         </div>
       </div>
 
+      {/* Tabs with counts */}
+      <div className={styles.tabContainer}>
+        <button
+          className={`${styles.tabButton} ${
+            tab === "active" ? styles.activeTab : ""
+          }`}
+          onClick={() => setTab("active")}
+        >
+          Active ({activeCount})
+        </button>
+        <button
+          className={`${styles.tabButton} ${
+            tab === "completed" ? styles.activeTab : ""
+          }`}
+          onClick={() => setTab("completed")}
+        >
+          Completed ({completedCount})
+        </button>
+      </div>
+
       {loading ? (
         <p>Loading auctions...</p>
       ) : (
         <>
-          {/* filters */}
+          {/* Filters */}
           <div className={styles.filterContainer}>
             <label>Category:</label>
-            <select
+            <input
+              type="text"
+              placeholder="Search category"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            />
 
             <label>Search:</label>
             <input
@@ -336,7 +330,7 @@ function BrowseAuctions() {
             />
           </div>
 
-          {/* table */}
+          {/* Auction Table */}
           <table className={styles.auctionTable}>
             <thead>
               <tr>
@@ -357,10 +351,9 @@ function BrowseAuctions() {
                   <td>{a.name}</td>
                   <td>{a.firstBid}</td>
                   <td>{a.currently || a.firstBid}</td>
-                  <td>{a.buyPrice}</td>
+                  <td>{a.buyPrice || "-"}</td>
                   <td>{a.categories.join(", ")}</td>
                   <td>{a.numberOfBids}</td>
-
                   <td>{formatDate(a.starts)}</td>
                   <td>{formatDate(a.ends)}</td>
                   <td className={styles.actions}>
@@ -370,7 +363,7 @@ function BrowseAuctions() {
                     >
                       Info
                     </button>
-                    {role === "buyer" && (
+                    {role === "buyer" && tab === "active" && (
                       <>
                         <button
                           className={styles.bid}
@@ -391,29 +384,29 @@ function BrowseAuctions() {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <div className={styles.pagination}>
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              Prev
+            </button>
+            <span>
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
         </>
       )}
 
-      {/* pagination */}
-      <div className={styles.pagination}>
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-        >
-          Prev
-        </button>
-        <span>
-          {currentPage} / {totalPages}
-        </span>
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-        >
-          Next
-        </button>
-      </div>
-
-      {/* modal */}
+      {/* Bid Modal */}
       {showBidModal && currentAuction && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>

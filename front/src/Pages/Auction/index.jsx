@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { placeBid, getUserRole } from "../../axios/auth";
+import { placeBid, getUserRole, getOwnInfo } from "../../axios/auth";
 import formatDate from "../../Utils/formatDate";
 import styles from "./Auction.module.css"; // your CSS module
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -29,7 +29,16 @@ function AuctionPage() {
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
-  const [coords, setCoords] = useState([0, 0]); // <- move this here
+  const [coords, setCoords] = useState([0, 0]);
+  const [user, setUser] = useState("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const infoRes = await getOwnInfo();
+      if (infoRes.user) setUser(infoRes.user);
+    };
+    fetchUser();
+  }, []);
 
   // Fetch auction and bids
   useEffect(() => {
@@ -37,9 +46,11 @@ function AuctionPage() {
       try {
         const res = await axios.get(`http://localhost:5000/api/auctions/${id}`);
         setAuction(res.data);
+        console.log(res.data);
 
         const bidsRes = await axios.get(`http://localhost:5000/api/bids/${id}`);
         setBids(bidsRes.data.bids);
+        console.log(bidsRes.data);
       } catch (err) {
         console.error(err);
         setError(
@@ -295,9 +306,12 @@ function AuctionPage() {
 
           {/* Bid Button */}
           {role === "buyer" && !auction.sold && (
-            <div style={{ marginTop: "1rem" }}>
+            <div className={styles.actionButtons}>
               <button className={styles.bidButton} onClick={handleOpenBid}>
                 Place Bid
+              </button>
+              <button className={styles.buyButton} onClick={handleBuy}>
+                Buy
               </button>
             </div>
           )}
@@ -314,7 +328,7 @@ function AuctionPage() {
               <p>
                 <strong>Final Price:</strong> ${auction.winner.amount}
               </p>
-              {role !== "buyer" && (
+              {role === "seller" && (
                 <button
                   className={styles.messageBuyerBtn}
                   onClick={() =>
@@ -322,6 +336,16 @@ function AuctionPage() {
                   }
                 >
                   Message Buyer
+                </button>
+              )}
+              {role === "buyer" && user.id == auction.winner_id && (
+                <button
+                  className={styles.messageBuyerBtn}
+                  onClick={() =>
+                    alert(`Messaging seller: ${auction.seller_username}`)
+                  }
+                >
+                  Message Seller
                 </button>
               )}
             </div>

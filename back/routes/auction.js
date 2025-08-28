@@ -15,6 +15,7 @@ router.get("/active", auctionController.getActiveAuctions);
 router.get("/", (req, res) => {
   res.send("Η route /api/auctions λειτουργεί σωστά");
 });
+router.get("/mine", verifyToken, auctionController.getUserAuctions);
 
 router.get("/won", verifyToken, auctionController.getWonAuctions);
 
