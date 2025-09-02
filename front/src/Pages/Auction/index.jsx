@@ -129,7 +129,7 @@ function AuctionPage() {
 
   const handleBuy = (auction) => {
     const confirmBuy = window.confirm(
-      `Are you sure you want to Buy Now "${auction.name}" for $${auction.buyPrice}?`
+      `Are you sure you want to Buy Now "${auction.name}" for $${auction.buy_price}?`
     );
     if (!confirmBuy) return;
 
@@ -157,7 +157,6 @@ function AuctionPage() {
           ...prev,
           sold: true,
           currently: auction.buy_price, // update current price
-          numberOfBids: (prev.numberOfBids || 0) + 1, // increment bid count
           winner: winnerData,
         }));
 
@@ -310,7 +309,10 @@ function AuctionPage() {
               <button className={styles.bidButton} onClick={handleOpenBid}>
                 Place Bid
               </button>
-              <button className={styles.buyButton} onClick={handleBuy}>
+              <button
+                className={styles.buyButton}
+                onClick={() => handleBuy(auction)}
+              >
                 Buy
               </button>
             </div>
@@ -338,16 +340,19 @@ function AuctionPage() {
                   Message Buyer
                 </button>
               )}
-              {role === "buyer" && user.id == auction.winner_id && (
-                <button
-                  className={styles.messageBuyerBtn}
-                  onClick={() =>
-                    alert(`Messaging seller: ${auction.seller_username}`)
-                  }
-                >
-                  Message Seller
-                </button>
-              )}
+              {role === "buyer" &&
+                (user.id == auction.winner_id ||
+                  user.username == auction.winner.username ||
+                  auction.winner.username == "You") && (
+                  <button
+                    className={styles.messageBuyerBtn}
+                    onClick={() =>
+                      alert(`Messaging seller: ${auction.seller_username}`)
+                    }
+                  >
+                    Message Seller
+                  </button>
+                )}
             </div>
           )}
 

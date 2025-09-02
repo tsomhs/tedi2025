@@ -158,9 +158,9 @@ function MyAuctions() {
         setShowModal(false);
         return notify(res.msg || "Error creating auction.");
       }
+      setNewAuction(getEmptyAuction());
 
       await fetchAuctions();
-      setNewAuction(getEmptyAuction());
       setShowModal(false);
       setActiveTab(1);
       notify("Auction created successfully!", "success");
