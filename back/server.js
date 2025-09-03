@@ -45,6 +45,9 @@ app.use("/api/history", historyRoutes);
 const userRoutes = require("./routes/users");
 app.use("/api/users", userRoutes);
 
+// server.js (απόσπασμα)
+const recommendationRoutes = require('./routes/recommendations');
+app.use('/api/recommendations', recommendationRoutes);
 // Εκκίνηση server
 const PORT = 5000;
 app.listen(PORT, () => {
