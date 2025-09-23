@@ -11,6 +11,7 @@ import Browse from "./Pages/Browse/index.jsx";
 import UserRole from "./Pages/UserRole/index.jsx";
 import AuctionsBought from "./Pages/AuctionsBought/index.jsx";
 import Messages from "./Pages/Messages/index.jsx";
+import Chat from "./Pages/Chat/index.jsx";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/browse" element={<Browse />} />
         <Route path="/auctions-bought" element={<AuctionsBought />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/chat/:chatId" element={<Chat />} />
       </Routes>
     </Router>
   );

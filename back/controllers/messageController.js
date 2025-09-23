@@ -1,72 +1,218 @@
 // controllers/messageController.js
 
-const db = require('../config/db');
+const db = require("../config/db");
 
-// Αποστολή μηνύματος
-exports.sendMessage = (req, res) => {
-  const from_user = req.user.id;
-  const { to_user, subject, body } = req.body;
+// Send a message
+exports.sendMessage = async (req, res) => {
+  try {
+    const from_user = req.user.id;
+    const { to_user, subject, body } = req.body;
 
-  if (!to_user || !body) {
-    return res.status(400).json({ msg: 'Recipient and message body are required' });
+    if (!to_user || !body) {
+      return res
+        .status(400)
+        .json({ msg: "Recipient and message body are required" });
+    }
+
+    const query = `
+      INSERT INTO messages (from_user, to_user, subject, body)
+      VALUES (?, ?, ?, ?)`;
+
+    await db
+      .promise()
+      .query(query, [from_user, to_user, subject || null, body]);
+
+    res.json({ msg: "Message sent successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error sending message", err });
   }
-
-  const query = `
-    INSERT INTO messages (from_user, to_user, subject, body)
-    VALUES (?, ?, ?, ?)`;
-
-  db.query(query, [from_user, to_user, subject || null, body], err => {
-    if (err) return res.status(500).json({ msg: 'Error sending message', err });
-    res.json({ msg: 'Message sent successfully' });
-  });
 };
 
-// Εισερχόμενα μηνύματα
-exports.getInbox = (req, res) => {
-  const userId = req.user.id;
+// Get inbox messages
+exports.getInbox = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-  const query = `
-    SELECT m.*, u.username AS sender_username
-    FROM messages m
-    JOIN users u ON m.from_user = u.id
-    WHERE m.to_user = ? AND m.deleted_by_receiver = FALSE
-    ORDER BY m.sent_at DESC`;
+    const query = `
+      SELECT m.id, m.from_user, u.username AS sender_username,
+             m.subject, m.body, m.sent_at, m.is_read, m.chat_id
+      FROM messages m
+      JOIN users u ON m.from_user = u.id
+      WHERE m.to_user = ? AND m.deleted_by_receiver = 0
+      ORDER BY m.sent_at DESC
+    `;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) return res.status(500).json({ msg: 'Error loading inbox', err });
+    const [results] = await db.promise().query(query, [userId]);
     res.json({ inbox: results });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error loading inbox", err });
+  }
 };
 
-// Απεσταλμένα μηνύματα
-exports.getSent = (req, res) => {
-  const userId = req.user.id;
+// Get sent messages
+exports.getSent = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
-  const query = `
-    SELECT m.*, u.username AS recipient_username
-    FROM messages m
-    JOIN users u ON m.to_user = u.id
-    WHERE m.from_user = ? AND m.deleted_by_sender = FALSE
-    ORDER BY m.sent_at DESC`;
+    const query = `
+      SELECT m.id, m.to_user, u.username AS recipient_username,
+             m.subject, m.body, m.sent_at, m.chat_id
+      FROM messages m
+      JOIN users u ON m.to_user = u.id
+      WHERE m.from_user = ? AND m.deleted_by_sender = 0
+      ORDER BY m.sent_at DESC
+    `;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) return res.status(500).json({ msg: 'Error loading sent messages', err });
+    const [results] = await db.promise().query(query, [userId]);
     res.json({ sent: results });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error loading sent messages", err });
+  }
 };
 
-// Σήμανση ως αναγνωσμένο
-exports.markAsRead = (req, res) => {
-  const userId = req.user.id;
-  const messageId = req.params.id;
+// Mark message as read
+exports.markAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const messageId = req.params.id;
 
-  const query = `
-    UPDATE messages
-    SET is_read = TRUE
-    WHERE id = ? AND to_user = ?`;
+    const query = `
+      UPDATE messages
+      SET is_read = 1
+      WHERE id = ? AND to_user = ?`;
 
-  db.query(query, [messageId, userId], err => {
-    if (err) return res.status(500).json({ msg: 'Error updating message status', err });
-    res.json({ msg: 'Message marked as read' });
-  });
+    await db.promise().query(query, [messageId, userId]);
+
+    res.json({ msg: "Message marked as read" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error updating message status", err });
+  }
+};
+
+// Get conversation with a specific user
+exports.getConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const otherUserId = parseInt(req.params.userId);
+
+    const query = `
+      SELECT m.id, m.from_user, m.to_user, u1.username AS from_username, u2.username AS to_username,
+             m.subject, m.body, m.sent_at, m.is_read
+      FROM messages m
+      JOIN users u1 ON m.from_user = u1.id
+      JOIN users u2 ON m.to_user = u2.id
+      WHERE (m.from_user = ? AND m.to_user = ?) OR (m.from_user = ? AND m.to_user = ?)
+      ORDER BY m.sent_at ASC`;
+
+    const [messages] = await db
+      .promise()
+      .query(query, [userId, otherUserId, otherUserId, userId]);
+
+    // Mark all messages from the other user as read
+    await db
+      .promise()
+      .query(
+        `UPDATE messages SET is_read = 1 WHERE from_user = ? AND to_user = ?`,
+        [otherUserId, userId]
+      );
+
+    res.json({ messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error loading conversation", err });
+  }
+};
+
+// Soft delete a message
+exports.deleteMessage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const messageId = parseInt(req.params.id);
+
+    // Get message
+    const [[msg]] = await db
+      .promise()
+      .query(`SELECT * FROM messages WHERE id = ?`, [messageId]);
+
+    if (!msg) return res.status(404).json({ msg: "Message not found" });
+
+    if (msg.from_user === userId) {
+      await db
+        .promise()
+        .query(`UPDATE messages SET deleted_by_sender = 1 WHERE id = ?`, [
+          messageId,
+        ]);
+    } else if (msg.to_user === userId) {
+      await db
+        .promise()
+        .query(`UPDATE messages SET deleted_by_receiver = 1 WHERE id = ?`, [
+          messageId,
+        ]);
+    } else {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    res.json({ msg: "Message deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error deleting message", err });
+  }
+};
+
+// Get count of unread messages
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const query = `
+      SELECT COUNT(*) AS unreadCount
+      FROM messages
+      WHERE to_user = ? AND is_read = 0 AND deleted_by_receiver = 0
+    `;
+
+    const [[{ unreadCount }]] = await db.promise().query(query, [userId]);
+
+    res.json({ unreadCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error fetching unread messages count", err });
+  }
+};
+
+// Get messages in a specific chat
+exports.getChatMessages = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const chatId = parseInt(req.params.chatId);
+
+    // Fetch all messages for this chat
+    const query = `
+      SELECT m.id, m.from_user, m.to_user, u1.username AS from_username, u2.username AS to_username,
+             m.body, m.sent_at, m.is_read
+      FROM messages m
+      JOIN users u1 ON m.from_user = u1.id
+      JOIN users u2 ON m.to_user = u2.id
+      WHERE m.chat_id = ? AND (m.from_user = ? OR m.to_user = ?)
+      ORDER BY m.sent_at ASC
+    `;
+
+    const [results] = await db.promise().query(query, [chatId, userId, userId]);
+
+    // Mark all messages **from the other user** as read
+    await db
+      .promise()
+      .query(
+        `UPDATE messages SET is_read = 1 WHERE chat_id = ? AND to_user = ? AND is_read = 0`,
+        [chatId, userId]
+      );
+
+    res.json({ messages: results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error loading chat messages", err });
+  }
 };

@@ -1,62 +1,58 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getOwnInfo } from "../../axios/auth";
+import axios from "axios";
 import styles from "./Messages.module.css";
 
 function MessagingPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("inbox");
   const [inbox, setInbox] = useState([]);
   const [sent, setSent] = useState([]);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
 
-  // Load messages stub
-  const loadMessages = async () => {
-    console.log("Loading messages...");
+  const token = localStorage.getItem("token"); // adjust if using context or redux
 
-    // Stub data
-    const inboxData = [
-      {
-        id: 1,
-        from: "Alice",
-        text: "Hello!",
-        time: new Date().toISOString(),
-        isNew: true,
-      },
-      {
-        id: 2,
-        from: "Bob",
-        text: "Are you available?",
-        time: new Date().toISOString(),
-        isNew: false,
-      },
-    ];
+  const fetchMessages = async () => {
+    try {
+      const [inboxRes, sentRes, unreadRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/messages/inbox", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/messages/sent", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/messages/unread-count", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-    const sentData = [
-      {
-        id: 1,
-        to: "Charlie",
-        text: "Yes, I am.",
-        time: new Date().toISOString(),
-      },
-    ];
+      setInbox(inboxRes.data.inbox);
+      setSent(sentRes.data.sent);
+      setNewMessagesCount(unreadRes.data.unreadCount);
 
-    setInbox(inboxData);
-    setSent(sentData);
-    setNewMessagesCount(inboxData.filter((m) => m.isNew).length);
+      console.log(inboxRes);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    }
   };
 
   const refreshMessages = async () => {
-    console.log("Refreshing messages...");
-    await loadMessages();
-  };
-
-  const deleteMessage = (id, type) => {
-    console.log(`Delete message ${id} from ${type}`);
-    if (type === "inbox") setInbox((prev) => prev.filter((m) => m.id !== id));
-    else setSent((prev) => prev.filter((m) => m.id !== id));
+    await fetchMessages();
   };
 
   useEffect(() => {
-    loadMessages();
+    fetchMessages();
   }, []);
+
+  const openChat = (chat) => {
+    // Use chat_id instead of user ID
+    if (!chat.chat_id) {
+      console.error("No chat_id available for this message");
+      return;
+    }
+    navigate(`/chat/${chat.chat_id}`);
+  };
 
   return (
     <div className={styles.container}>
@@ -66,6 +62,7 @@ function MessagingPage() {
           {newMessagesCount} new message{newMessagesCount > 1 ? "s" : ""}
         </p>
       )}
+
       <div className={styles.tabs}>
         <button
           className={activeTab === "inbox" ? styles.activeTab : ""}
@@ -84,33 +81,33 @@ function MessagingPage() {
         </button>
       </div>
 
-      <div className={styles.messagesList}>
-        {(activeTab === "inbox" ? inbox : sent).map((msg) => (
-          <div
-            key={msg.id}
-            className={`${styles.message} ${msg.isNew ? styles.newMsg : ""}`}
-          >
-            <p>
-              {activeTab === "inbox" ? (
-                <strong>From: {msg.from}</strong>
-              ) : (
-                <strong>To: {msg.to}</strong>
-              )}
-              <span className={styles.time}>
-                {new Date(msg.time).toLocaleString()}
-              </span>
-            </p>
-            <p>{msg.text}</p>
-            <button
-              className={styles.deleteBtn}
-              onClick={() => deleteMessage(msg.id, activeTab)}
+      <div className={styles.chatList}>
+        {((activeTab === "inbox" ? inbox : sent) || []).length === 0 ? (
+          <p className={styles.emptyMsg}>No messages.</p>
+        ) : (
+          ((activeTab === "inbox" ? inbox : sent) || []).map((chat) => (
+            <div
+              key={chat.id}
+              className={`${styles.chatItem} ${
+                activeTab === "inbox" && !chat.is_read ? styles.newChat : ""
+              }`}
+              onClick={() => openChat(chat)}
             >
-              Delete
-            </button>
-          </div>
-        ))}
-        {(activeTab === "inbox" ? inbox : sent).length === 0 && (
-          <p>No messages.</p>
+              <div className={styles.chatHeader}>
+                <span className={styles.chatUser}>
+                  {activeTab === "inbox"
+                    ? chat.sender_username
+                    : chat.recipient_username}
+                </span>
+                <span className={styles.chatTime}>
+                  {new Date(chat.sent_at).toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.chatSnippet}>
+                {chat.body?.slice(0, 60)}...
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

@@ -1,20 +1,25 @@
-// routes/messages.js
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const messageController = require('../controllers/messageController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const messageController = require("../controllers/messageController");
+const { verifyToken } = require("../middleware/authMiddleware");
 
-// Αποστολή νέου μηνύματος
-router.post('/', verifyToken, messageController.sendMessage);
+// Send a new message (create chat if chat_id not provided)
+router.post("/", verifyToken, messageController.sendMessage);
 
-// Προβολή εισερχομένων
-router.get('/inbox', verifyToken, messageController.getInbox);
+// Get inbox messages
+router.get("/inbox", verifyToken, messageController.getInbox);
 
-// Προβολή απεσταλμένων
-router.get('/sent', verifyToken, messageController.getSent);
+// Get sent messages
+router.get("/sent", verifyToken, messageController.getSent);
 
-// Σήμανση ως αναγνωσμένο
-router.put('/:id/read', verifyToken, messageController.markAsRead);
+// Mark a message as read
+router.put("/:id/read", verifyToken, messageController.markAsRead);
+
+// Get unread messages count
+router.get("/unread-count", verifyToken, messageController.getUnreadCount);
+
+// --- NEW CHAT ENDPOINTS ---
+// Get messages in a chat
+router.get("/chat/:chatId", verifyToken, messageController.getChatMessages);
 
 module.exports = router;
