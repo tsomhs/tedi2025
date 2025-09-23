@@ -2,7 +2,8 @@
   background-color: #b9b8b8;
   min-height: 100vh;
   width: 100vw;
-  padding: 2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
@@ -11,18 +12,29 @@
 }
 .header {
   display: flex;
+  justify-content: space-between; /* left content vs right button */
   align-items: center;
-  justify-content: space-between;
-  margin-top: 4rem;
+  margin-top: 2rem;
+  padding: 0 1rem; /* optional horizontal padding */
+}
+
+.leftHeader {
+  display: flex;
+  align-items: center; /* centers arrow & text vertically */
+  gap: 10px; /* space between arrow and title */
+}
+
+.leftHeader h1 {
+  margin: 0;
+  line-height: 1; /* ensures vertical center */
+  font-size: 2rem; /* adjust to match arrow visually */
 }
 
 .backArrow {
-  position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
-  font-size: 3.2rem;
+  font-size: 2.5rem; /* adjust as needed */
   color: #0a0a0a;
   cursor: pointer;
+  align-items: center;
   transition: color 0.3s ease, transform 0.2s ease;
 }
 
@@ -30,6 +42,7 @@
   color: #06e94a;
   transform: translateX(-3px);
 }
+
 /* Auction table styling */
 .auctionTable {
   width: 100%;
@@ -119,7 +132,6 @@
 
   .auctionTable button {
     width: 100%;
-    margin-bottom: 4px;
   }
 }
 
@@ -227,7 +239,6 @@
 }
 /* Filters container - horizontal toolbar */
 .filterContainer {
-  margin-bottom: 1.5rem;
   display: flex;
   flex-wrap: wrap; /* wrap to next line on small screens */
   align-items: center;
@@ -291,15 +302,6 @@
     flex: 1 1 100%; /* full width on small screens */
     min-width: auto;
   }
-}
-/* Pagination container */
-.pagination {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  align-items: center;
-  font-weight: bold;
 }
 
 /* Pagination buttons */
@@ -370,7 +372,7 @@
 }
 
 .tabButton:hover {
-  background-color: #e0e0e0;
+  background-color: #1869e4;
 }
 
 .activeTab {
@@ -382,7 +384,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 15px;
 }
 
 .filterContainer label {
@@ -394,4 +395,26 @@
   padding: 4px 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
+}
+
+.tableWrapper {
+  flex: 1; /* allow table to take available space */
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh; /* ensures a steady block */
+}
+
+.auctionTable {
+  flex: 1; /* table grows */
+}
+
+.pagination {
+  padding: 1rem 0;
+  margin-bottom: 1rem;
+
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  font-weight: bold;
 }

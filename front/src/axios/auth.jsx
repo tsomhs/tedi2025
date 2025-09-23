@@ -131,16 +131,55 @@ export async function createAuction(auctionData) {
     return { success: false, msg: err.message };
   }
 }
-// Get all auctions with optional pagination
-export async function getAllAuctions() {
+
+export const getAllAuctions = async (page, limit) => {
   try {
-    const res = await axios.get("http://localhost:5000/api/auctions/all");
-    return res.data; // expect { auctions: [...] }
+    const res = await axios.get(
+      `http://localhost:5000/api/auctions/all?page=${page}&limit=${limit}`
+    );
+
+    return res.data;
   } catch (err) {
     console.error("Error fetching auctions:", err);
     throw err;
   }
-}
+};
+
+// Fetch active auctions
+export const getActiveAuctions = async (page = 1, limit = 10) => {
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/auctions/active?page=${page}&limit=${limit}`
+    );
+    return res.data; // { auctions, total, page, totalPages }
+  } catch (err) {
+    console.error("Error fetching active auctions:", err);
+    throw err;
+  }
+};
+
+// Fetch completed auctions
+export const getCompletedAuctions = async (page = 1, limit = 10) => {
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/auctions/completed?page=${page}&limit=${limit}`
+    );
+    return res.data; // { auctions, total, page, totalPages }
+  } catch (err) {
+    console.error("Error fetching completed auctions:", err);
+    throw err;
+  }
+};
+
+export const getAuctionCounts = async () => {
+  try {
+    const res = await axios.get(`http://localhost:5000/api/auctions/count`);
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching auction counts:", err);
+    throw err;
+  }
+};
 
 export async function getAllUsers() {
   try {

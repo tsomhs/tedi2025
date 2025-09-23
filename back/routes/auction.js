@@ -5,11 +5,17 @@ const router = express.Router();
 const auctionController = require("../controllers/auctionController");
 const { verifyToken } = require("../middleware/authMiddleware");
 
-// Αναζήτηση δημοπρασιών με φίλτρα
-router.get("/search", auctionController.searchAuctions);
-
 // Επιστροφή ενεργών δημοπρασιών (με σελιδοποίηση)
 router.get("/active", auctionController.getActiveAuctions);
+
+router.get("/completed", auctionController.getCompletedAuctions);
+
+router.get("/active", auctionController.getActiveAuctions);
+
+router.get("/count", auctionController.getAuctionCounts);
+
+// Αναζήτηση δημοπρασιών με φίλτρα
+router.get("/search", auctionController.searchAuctions);
 
 // Route δοκιμής
 router.get("/", (req, res) => {

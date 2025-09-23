@@ -267,14 +267,30 @@ exports.getAuctionById = (req, res) => {
 
 exports.getActiveAuctions = async (req, res) => {
   try {
-    const [results] = await db.promise().query(
-      `SELECT i.*, u.username AS seller_username
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [rows] = await db.promise().query(
+      `SELECT SQL_CALC_FOUND_ROWS i.*, u.username AS seller_username
        FROM items i
        JOIN users u ON i.seller_id = u.id
        WHERE NOW() BETWEEN i.started AND i.ends
-       ORDER BY i.ends ASC`
+       ORDER BY i.ends ASC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
-    res.json(results);
+
+    const [countResult] = await db
+      .promise()
+      .query(`SELECT FOUND_ROWS() as total`);
+    const total = countResult[0].total;
+
+    res.json({
+      auctions: rows,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
   } catch (err) {
     console.error("Error fetching active auctions:", err);
     res.status(500).json({ msg: "DB error", err });
@@ -388,45 +404,153 @@ exports.searchAuctions = (req, res) => {
   });
 };
 
-// Προβολή όλων των δημοπρασιών (χωρίς σελιδοποίηση)
 exports.getAllAuctions = async (req, res) => {
   try {
-    const [results] = await db.promise().query(`
-      SELECT i.*, 
-             u.id AS seller_id,
-             u.username AS seller_username,
-             (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS bid_count
-      FROM items i
-      LEFT JOIN users u ON i.seller_id = u.id
-      ORDER BY i.started DESC
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [results] = await db.promise().query(
+      `
+    SELECT 
+      i.*,
+      GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories,
+      (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
+    FROM items i
+    LEFT JOIN item_categories ic ON i.id = ic.item_id
+    GROUP BY i.id
+    ORDER BY i.id DESC
+    LIMIT ? OFFSET ?
+  `,
+      [limit, offset]
+    );
+    // turn "cat1||cat2||cat3" into ["cat1", "cat2", "cat3"]
+    results.forEach((item) => {
+      item.categories = item.categories ? item.categories.split("||") : [];
+    });
+
+    const [[{ total }]] = await db.promise().query(`
+      SELECT COUNT(*) AS total FROM items
     `);
 
-    // Fetch categories for all auctions
-    const auctions = await Promise.all(
-      results.map(async (item) => {
-        const [cats] = await db
-          .promise()
-          .query(
-            "SELECT category_name FROM item_categories WHERE item_id = ?",
-            [item.id]
-          );
+    res.json({
+      auctions: results,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+};
 
-        return {
-          ...item,
-          seller: {
-            id: item.seller_id,
-            username: item.seller_username,
-          },
-          categories: cats.map((c) => c.category_name),
-          location: item.location,
-        };
-      })
+exports.getActiveAuctions = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [results] = await db.promise().query(
+      `
+      SELECT 
+        i.*,
+        GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories,
+        (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
+      FROM items i
+      LEFT JOIN item_categories ic ON i.id = ic.item_id
+      WHERE i.started <= NOW() AND i.ends >= NOW()
+      GROUP BY i.id
+      ORDER BY i.id DESC
+      LIMIT ? OFFSET ?
+    `,
+      [limit, offset]
     );
 
-    res.json({ auctions, total: auctions.length });
+    results.forEach((item) => {
+      item.categories = item.categories ? item.categories.split(", ") : [];
+    });
+
+    const [[{ total }]] = await db.promise().query(`
+      SELECT COUNT(*) AS total
+      FROM items
+      WHERE started <= NOW() AND ends >= NOW()
+    `);
+
+    res.json({
+      auctions: results,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
-    console.error("DB error fetching auctions:", err);
-    res.status(500).json({ msg: "DB error", err });
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+};
+
+exports.getCompletedAuctions = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const [results] = await db.promise().query(
+      `
+      SELECT 
+        i.*,
+        GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories,
+        (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
+      FROM items i
+      LEFT JOIN item_categories ic ON i.id = ic.item_id
+      WHERE i.ends < NOW()
+      GROUP BY i.id
+      ORDER BY i.id DESC
+      LIMIT ? OFFSET ?
+    `,
+      [limit, offset]
+    );
+
+    results.forEach((item) => {
+      item.categories = item.categories ? item.categories.split(", ") : [];
+    });
+
+    const [[{ total }]] = await db.promise().query(`
+      SELECT COUNT(*) AS total
+      FROM items
+      WHERE ends < NOW()
+    `);
+
+    res.json({
+      auctions: results,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+};
+
+exports.getAuctionCounts = async (req, res) => {
+  try {
+    const [[{ active }]] = await db.promise().query(`
+      SELECT COUNT(*) AS active
+      FROM items
+      WHERE started <= NOW() AND ends >= NOW()
+    `);
+
+    const [[{ completed }]] = await db.promise().query(`
+      SELECT COUNT(*) AS completed
+      FROM items
+      WHERE ends < NOW()
+    `);
+
+    res.json({ active, completed });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
   }
 };
 

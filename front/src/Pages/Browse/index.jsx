@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  getAllAuctions,
   getUserRole,
-  getOwnInfo,
   placeBid,
+  getActiveAuctions,
+  getCompletedAuctions,
+  getAuctionCounts,
 } from "../../axios/auth";
 import styles from "./Browse.module.css";
 import formatDate from "../../Utils/formatDate";
@@ -12,13 +13,17 @@ import axios from "axios";
 
 function BrowseAuctions() {
   const navigate = useNavigate();
-  const [allAuctions, setAllAuctions] = useState([]);
   const [auctions, setAuctions] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // State for pagination per tab
+  const [currentPage, setCurrentPage] = useState({ active: 1, completed: 1 });
+  const [totalPages, setTotalPages] = useState({ active: 0, completed: 0 });
+  const [totalAuctions, setTotalAuctions] = useState({
+    active: 0,
+    completed: 0,
+  });
+
   const [role, setRole] = useState("");
-  const [userId, setUserId] = useState(null);
-  const [tab, setTab] = useState("active"); // "active" or "completed"
+  const [tab, setTab] = useState("active");
 
   // Modal state
   const [showBidModal, setShowBidModal] = useState(false);
@@ -28,8 +33,7 @@ function BrowseAuctions() {
 
   const [loading, setLoading] = useState(true);
 
-  // Filters
-  const [categories, setCategories] = useState([]);
+  // Filters (optional – right now applied client-side)
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -41,129 +45,136 @@ function BrowseAuctions() {
     const fetchUser = async () => {
       const roleRes = await getUserRole();
       if (roleRes.success) setRole(roleRes.role);
-      const infoRes = await getOwnInfo();
-      if (infoRes.user) setUserId(infoRes.user.id);
     };
     fetchUser();
   }, []);
 
-  // Fetch auctions
-  useEffect(() => {
-    const fetchAuctions = async () => {
+  const fetchAuctions = async (tabName, pageNum) => {
+    try {
       setLoading(true);
-      try {
-        const data = await getAllAuctions();
-        const user = await getOwnInfo();
+      let res;
+      if (tabName === "active") res = await getActiveAuctions(pageNum);
+      else res = await getCompletedAuctions(pageNum);
 
-        const mapped = data.auctions
-          .map((a) => ({
-            id: a.id,
-            name: a.name,
-            categories: a.categories || [],
-            firstBid: a.first_bid,
-            currently: a.currently || a.first_bid,
-            buyPrice: a.buy_price,
-            numberOfBids: a.bid_count || 0,
-            starts: a.started,
-            ends: a.ends,
-            seller: {
-              id: a.seller_id,
-              username: a.seller_username || "Unknown",
-            },
-            description: a.description || "",
-            country: a.country,
-            location: a.location,
-          }))
-          .filter(
-            (a) =>
-              a.seller?.userID !== user.user.username &&
-              a.seller.id !== user.user.id
-          );
+      setAuctions(res.auctions);
 
-        setAllAuctions(mapped);
-      } catch (err) {
-        console.error("Failed to load auctions:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (userId) fetchAuctions();
-  }, [userId]);
+      // Update current page state
+      setCurrentPage((prev) => ({
+        ...prev,
+        [tabName]: pageNum,
+      }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Calculate counts for tabs
-  const now = new Date();
-  const activeCount = allAuctions.filter(
-    (a) => now >= new Date(a.starts) && now <= new Date(a.ends)
-  ).length;
-  const completedCount = allAuctions.filter(
-    (a) => now > new Date(a.ends)
-  ).length;
+  const renderPagination = () => {
+    const pages = getPageNumbers(currentPage[tab], totalPages[tab], 5);
+    const buttons = [];
 
-  // Apply filters and tab
-  useEffect(() => {
-    let filtered = [...allAuctions];
-
-    // Tab filter
-    filtered = filtered.filter((a) =>
-      tab === "active"
-        ? now >= new Date(a.starts) && now <= new Date(a.ends)
-        : now > new Date(a.ends)
+    // Prev button
+    buttons.push(
+      <button
+        key="prev"
+        disabled={currentPage[tab] === 1}
+        onClick={() => fetchAuctions(tab, currentPage[tab] - 1)}
+      >
+        Prev
+      </button>
     );
 
-    // Category filter
-    if (selectedCategory.trim() !== "") {
-      const catTerm = selectedCategory.toLowerCase();
-      filtered = filtered.filter((a) =>
-        a.categories.some((c) => c.toLowerCase().includes(catTerm))
+    // Leading ellipsis if needed
+    if (pages[0] > 1) {
+      buttons.push(
+        <button key={1} onClick={() => fetchAuctions(tab, 1)}>
+          1
+        </button>
+      );
+      if (pages[0] > 2) buttons.push(<span key="start-ellipsis">...</span>);
+    }
+
+    // Numbered page buttons
+    pages.forEach((num) => {
+      buttons.push(
+        <button
+          key={num}
+          className={num === currentPage[tab] ? styles.activePage : ""}
+          onClick={() => fetchAuctions(tab, num)}
+        >
+          {num}
+        </button>
+      );
+    });
+
+    // Trailing ellipsis if needed
+    if (pages[pages.length - 1] < totalPages[tab]) {
+      if (pages[pages.length - 1] < totalPages[tab] - 1)
+        buttons.push(<span key="end-ellipsis">...</span>);
+      buttons.push(
+        <button
+          key={totalPages[tab]}
+          onClick={() => fetchAuctions(tab, totalPages[tab])}
+        >
+          {totalPages[tab]}
+        </button>
       );
     }
 
-    // Search term filter
-    if (searchTerm.trim() !== "") {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (a) =>
-          a.name.toLowerCase().includes(term) ||
-          a.description.toLowerCase().includes(term)
-      );
+    // Next button
+    buttons.push(
+      <button
+        key="next"
+        disabled={currentPage[tab] === totalPages[tab]}
+        onClick={() => fetchAuctions(tab, currentPage[tab] + 1)}
+      >
+        Next
+      </button>
+    );
+
+    return buttons;
+  };
+
+  const PAGE_LIMIT = 10;
+
+  const getTotalPages = async (tabName) => {
+    try {
+      const counts = await getAuctionCounts();
+      setTotalPages((prev) => ({
+        ...prev,
+        active: Math.ceil(counts.active / PAGE_LIMIT),
+        completed: Math.ceil(counts.completed / PAGE_LIMIT),
+      }));
+
+      setTotalAuctions((prev) => ({
+        ...prev,
+        active: counts.active,
+        completed: counts.completed,
+      }));
+
+      setCurrentPage((prev) => ({
+        ...prev,
+        [tabName]: 0,
+      }));
+    } catch (err) {
+      console.error(err);
     }
-    // Price filters
-    if (minPrice !== "")
-      filtered = filtered.filter(
-        (a) => parseFloat(a.currently) >= parseFloat(minPrice)
-      );
-    if (maxPrice !== "")
-      filtered = filtered.filter(
-        (a) => parseFloat(a.currently) <= parseFloat(maxPrice)
-      );
-    // Location filter
-    if (locationSearch.trim() !== "") {
-      const loc = locationSearch.toLowerCase();
-      filtered = filtered.filter(
-        (a) =>
-          (a.country && a.country.toLowerCase().includes(loc)) ||
-          (a.location && a.location.toLowerCase().includes(loc))
-      );
+  };
+
+  const getPageNumbers = (current, total, maxButtons = 5) => {
+    let start = Math.max(1, current - Math.floor(maxButtons / 2));
+    let end = start + maxButtons - 1;
+
+    if (end > total) {
+      end = total;
+      start = Math.max(1, end - maxButtons + 1);
     }
 
-    setAuctions(filtered);
-    setCurrentPage(1);
-  }, [
-    allAuctions,
-    tab,
-    selectedCategory,
-    searchTerm,
-    minPrice,
-    maxPrice,
-    locationSearch,
-  ]);
-
-  // Pagination
-  const totalPages = Math.ceil(auctions.length / itemsPerPage);
-  const paginated = auctions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+    const pages = [];
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  };
 
   // Bid modal handlers
   const handleOpenBid = (auction) => {
@@ -210,11 +221,7 @@ function BrowseAuctions() {
       setAuctions((prev) =>
         prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
       );
-      setAllAuctions((prev) =>
-        prev.map((a) => (a.id === updatedAuction.id ? updatedAuction : a))
-      );
       handleCloseBid();
-      setBidError("");
     } else {
       setBidError(result.msg);
     }
@@ -236,13 +243,22 @@ function BrowseAuctions() {
       .then((res) => {
         alert(res.data.msg);
         setAuctions((prev) => prev.filter((a) => a.id !== auction.id));
-        setAllAuctions((prev) => prev.filter((a) => a.id !== auction.id));
       })
       .catch((err) => {
         console.error(err);
         alert(err.response?.data?.msg || "Error processing Buy Now");
       });
   };
+
+  useEffect(() => {
+    fetchAuctions(tab, currentPage[tab]);
+  }, [tab]);
+
+  useEffect(() => {
+    getTotalPages("active");
+    getTotalPages("completed");
+  }, []);
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -264,7 +280,6 @@ function BrowseAuctions() {
           )}
         </div>
       </div>
-
       {/* Tabs with counts */}
       <div className={styles.tabContainer}>
         <button
@@ -273,7 +288,7 @@ function BrowseAuctions() {
           }`}
           onClick={() => setTab("active")}
         >
-          Active ({activeCount})
+          Active ({totalAuctions.active})
         </button>
         <button
           className={`${styles.tabButton} ${
@@ -281,12 +296,13 @@ function BrowseAuctions() {
           }`}
           onClick={() => setTab("completed")}
         >
-          Completed ({completedCount})
+          Completed ({totalAuctions.completed})
         </button>
       </div>
-
       {loading ? (
         <p>Loading auctions...</p>
+      ) : auctions.length === 0 ? (
+        <p>No auctions</p>
       ) : (
         <>
           {/* Filters */}
@@ -346,15 +362,27 @@ function BrowseAuctions() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((a) => (
+              {auctions.map((a) => (
                 <tr key={a.id}>
                   <td>{a.name}</td>
-                  <td>{a.firstBid}</td>
-                  <td>{a.currently || a.firstBid}</td>
-                  <td>{a.buyPrice || "-"}</td>
-                  <td>{a.categories.join(", ")}</td>
+                  <td>{a.first_bid}</td>
+                  <td>{a.currently || a.first_bid}</td>
+                  <td>{a.buy_price || "-"}</td>
+                  <td>
+                    {a.categories && a.categories.length > 0
+                      ? (() => {
+                          const text = Array.isArray(a.categories)
+                            ? a.categories.join(", ")
+                            : a.categories; // just in case backend sends string
+                          return text.length > 40
+                            ? text.slice(0, 40) + "..."
+                            : text;
+                        })()
+                      : "-"}
+                  </td>
+
                   <td>{a.numberOfBids}</td>
-                  <td>{formatDate(a.starts)}</td>
+                  <td>{formatDate(a.started)}</td>
                   <td>{formatDate(a.ends)}</td>
                   <td className={styles.actions}>
                     <button
@@ -386,23 +414,7 @@ function BrowseAuctions() {
           </table>
 
           {/* Pagination */}
-          <div className={styles.pagination}>
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-            >
-              Prev
-            </button>
-            <span>
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </div>
+          <div className={styles.pagination}>{renderPagination()}</div>
         </>
       )}
 
