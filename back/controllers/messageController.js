@@ -3,10 +3,11 @@
 const db = require("../config/db");
 
 // Send a message
+// controllers/messageController.js
 exports.sendMessage = async (req, res) => {
   try {
     const from_user = req.user.id;
-    const { to_user, subject, body } = req.body;
+    const { to_user, subject, body, chat_id } = req.body; // chat_id from frontend (optional)
 
     if (!to_user || !body) {
       return res
@@ -14,15 +15,42 @@ exports.sendMessage = async (req, res) => {
         .json({ msg: "Recipient and message body are required" });
     }
 
-    const query = `
-      INSERT INTO messages (from_user, to_user, subject, body)
-      VALUES (?, ?, ?, ?)`;
+    let finalChatId = chat_id;
 
-    await db
+    // If no chat_id provided, check if a conversation already exists
+    if (!finalChatId) {
+      const [[existingChat]] = await db.promise().query(
+        `SELECT chat_id FROM messages 
+           WHERE (from_user = ? AND to_user = ?) 
+              OR (from_user = ? AND to_user = ?) 
+           ORDER BY sent_at ASC LIMIT 1`,
+        [from_user, to_user, to_user, from_user]
+      );
+
+      if (existingChat) {
+        finalChatId = existingChat.chat_id;
+      } else {
+        // Generate new chat_id
+        const [[maxChat]] = await db
+          .promise()
+          .query(`SELECT MAX(chat_id) AS maxChatId FROM messages`);
+        finalChatId = (maxChat.maxChatId || 0) + 1;
+      }
+    }
+
+    // Insert message with chat_id
+    const [result] = await db.promise().query(
+      `INSERT INTO messages (from_user, to_user, subject, body, chat_id)
+         VALUES (?, ?, ?, ?, ?)`,
+      [from_user, to_user, subject || null, body, finalChatId]
+    );
+
+    // Fetch inserted message
+    const [[message]] = await db
       .promise()
-      .query(query, [from_user, to_user, subject || null, body]);
+      .query(`SELECT * FROM messages WHERE id = ?`, [result.insertId]);
 
-    res.json({ msg: "Message sent successfully" });
+    res.json({ msg: "Message sent successfully", message });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Error sending message", err });

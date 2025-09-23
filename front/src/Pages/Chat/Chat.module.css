@@ -100,3 +100,17 @@
 .inputContainer button:hover {
   background: #1e7e34;
 }
+.deleteBtn {
+  margin-left: 10px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: #a71d2a;
+}

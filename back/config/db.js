@@ -6,7 +6,7 @@ const mysql = require("mysql2");
 const db = mysql.createConnection({
   host: "localhost", //Αν τρέχεις τοπικά
   user: "root", //Χρήστης MySQL (π.χ. root)
-  password: "2001", // Ο κωδικός σου στη MySQL
+  password: "9004", // Ο κωδικός σου στη MySQL
   database: "auction_db", // Το όνομα της βάσης σου
   dateStrings: true,
 });

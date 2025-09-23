@@ -4,16 +4,16 @@ import styles from "./Chat.module.css";
 import axios from "axios";
 
 function ChatPage() {
-  const { chatId } = useParams(); // now it's actual chat ID
+  const { chatId } = useParams(); // actual chat ID (optional for new chat)
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [userId, setUserId] = useState(null);
+  const [currentChatId, setCurrentChatId] = useState(chatId || null);
 
-  // Load user ID
+  // Load user info
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
@@ -25,22 +25,21 @@ function ChatPage() {
     fetchUser();
   }, []);
 
+  // Load chat messages if chatId exists
   useEffect(() => {
-    const container = document.querySelector(`.${styles.messagesContainer}`);
-    container.scrollTop = container.scrollHeight;
-  }, [messages]);
+    if (!currentChatId) {
+      setLoading(false);
+      return;
+    }
 
-  // Load chat messages from backend
-  useEffect(() => {
     const loadChat = async () => {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          `http://localhost:5000/api/messages/chat/${chatId}`,
+          `http://localhost:5000/api/messages/chat/${currentChatId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(res.data.messages || []);
-        console.log(res.data);
       } catch (err) {
         console.error("Error loading chat:", err);
       } finally {
@@ -48,37 +47,63 @@ function ChatPage() {
       }
     };
     loadChat();
-  }, [chatId]);
+  }, [currentChatId]);
+
+  // Determine the other participant user ID
+  const getOtherUserId = () => {
+    const msg = messages.find(
+      (m) => m.from_user !== userId || m.to_user !== userId
+    );
+    if (msg) return msg.from_user === userId ? msg.to_user : msg.from_user;
+    return null;
+  };
 
   // Send new message
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    const otherUser = getOtherUserId();
+    if (!newMessage.trim() || !otherUser) {
+      alert("Cannot send message: no recipient.");
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
+
+      // Include chat_id if it exists
+      const payload = {
+        to_user: otherUser,
+        body: newMessage,
+      };
+      if (currentChatId) payload.chat_id = currentChatId;
+
       const res = await axios.post(
         "http://localhost:5000/api/messages",
-        {
-          chat_id: chatId, // send chat_id now
-          body: newMessage,
-        },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Optimistically add to UI
-      const newMsgObj = {
-        id: Date.now(),
-        from_user: "me",
-        chat_id: chatId,
-        text: newMessage,
-        time: new Date().toISOString(),
-        fromMe: true,
-      };
+      const sentMessage = res.data.message;
+      setCurrentChatId(sentMessage.chat_id); // store chat_id for future messages
 
-      setMessages((prev) => [...prev, newMsgObj]);
+      setMessages((prev) => [...prev, sentMessage]);
       setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);
+    }
+  };
+
+  // Delete a message
+  const handleDelete = async (messageId) => {
+    console.log("Deleting message ID:", messageId);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/messages/${messageId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    } catch (err) {
+      console.error("Error deleting message:", err);
     }
   };
 
@@ -94,7 +119,7 @@ function ChatPage() {
       <div className={styles.messagesContainer}>
         {loading ? (
           <p>Loading...</p>
-        ) : messages.length > 0 ? (
+        ) : messages.length ? (
           messages.map((msg) => (
             <div
               key={msg.id}
@@ -102,10 +127,18 @@ function ChatPage() {
                 msg.from_user === userId ? styles.fromMe : styles.fromThem
               }`}
             >
-              <p>{msg.body || msg.text}</p>
+              <p>{msg.body}</p>
               <span className={styles.time}>
-                {new Date(msg.sent_at || msg.time).toLocaleString()}
+                {new Date(msg.sent_at).toLocaleString()}
               </span>
+              {msg.from_user === userId && (
+                <button
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(msg.id)}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           ))
         ) : (

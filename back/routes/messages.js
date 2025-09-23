@@ -18,8 +18,10 @@ router.put("/:id/read", verifyToken, messageController.markAsRead);
 // Get unread messages count
 router.get("/unread-count", verifyToken, messageController.getUnreadCount);
 
-// --- NEW CHAT ENDPOINTS ---
 // Get messages in a chat
 router.get("/chat/:chatId", verifyToken, messageController.getChatMessages);
+
+// Soft delete a message
+router.delete("/:id", verifyToken, messageController.deleteMessage);
 
 module.exports = router;
