@@ -145,26 +145,25 @@ export const getAllAuctions = async (page, limit) => {
   }
 };
 
-// Fetch active auctions
-export const getActiveAuctions = async (page = 1, limit = 10) => {
+export const getActiveAuctions = async (params = {}) => {
   try {
-    const res = await axios.get(
-      `http://localhost:5000/api/auctions/active?page=${page}&limit=${limit}`
-    );
-    return res.data; // { auctions, total, page, totalPages }
+    const res = await axios.get(`http://localhost:5000/api/auctions/active`, {
+      params,
+    });
+    return res.data;
   } catch (err) {
     console.error("Error fetching active auctions:", err);
     throw err;
   }
 };
 
-// Fetch completed auctions
-export const getCompletedAuctions = async (page = 1, limit = 10) => {
+export const getCompletedAuctions = async (params = {}) => {
   try {
     const res = await axios.get(
-      `http://localhost:5000/api/auctions/completed?page=${page}&limit=${limit}`
+      `http://localhost:5000/api/auctions/completed`,
+      { params }
     );
-    return res.data; // { auctions, total, page, totalPages }
+    return res.data;
   } catch (err) {
     console.error("Error fetching completed auctions:", err);
     throw err;

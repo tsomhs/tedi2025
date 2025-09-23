@@ -451,6 +451,62 @@ exports.getActiveAuctions = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      location,
+      orderBy,
+      orderDir,
+    } = req.query;
+
+    // Filter conditions
+    const conditions = ["i.started <= NOW()", "i.ends >= NOW()"];
+    const values = [];
+
+    if (category) {
+      conditions.push("ic.category_name LIKE ?");
+      values.push(`%${category}%`);
+    }
+    if (search) {
+      conditions.push("(i.name LIKE ? OR i.description LIKE ?)");
+      values.push(`%${search}%`, `%${search}%`);
+    }
+    if (minPrice) {
+      conditions.push("i.currently >= ?");
+      values.push(minPrice);
+    }
+    if (maxPrice) {
+      conditions.push("i.currently <= ?");
+      values.push(maxPrice);
+    }
+    if (location) {
+      conditions.push("i.location LIKE ?");
+      values.push(`%${location}%`);
+    }
+
+    const whereClause = conditions.length
+      ? "WHERE " + conditions.join(" AND ")
+      : "";
+
+    // Dynamic ordering
+    const allowedColumns = [
+      "id",
+      "currently",
+      "buyPrice",
+      "name",
+      "started",
+      "ends",
+    ];
+    const orderColumn = allowedColumns.includes(orderBy)
+      ? `i.${orderBy}`
+      : "i.id";
+    const orderDirection =
+      orderDir && orderDir.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const orderClause = `ORDER BY ${orderColumn} ${orderDirection}`;
+
+    // Fetch auctions
     const [results] = await db.promise().query(
       `
       SELECT 
@@ -459,23 +515,28 @@ exports.getActiveAuctions = async (req, res) => {
         (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
       FROM items i
       LEFT JOIN item_categories ic ON i.id = ic.item_id
-      WHERE i.started <= NOW() AND i.ends >= NOW()
+      ${whereClause}
       GROUP BY i.id
-      ORDER BY i.id DESC
+      ${orderClause}
       LIMIT ? OFFSET ?
-    `,
-      [limit, offset]
+      `,
+      [...values, limit, offset]
     );
 
     results.forEach((item) => {
       item.categories = item.categories ? item.categories.split(", ") : [];
     });
 
-    const [[{ total }]] = await db.promise().query(`
-      SELECT COUNT(*) AS total
-      FROM items
-      WHERE started <= NOW() AND ends >= NOW()
-    `);
+    // Total count for pagination
+    const [[{ total }]] = await db.promise().query(
+      `
+      SELECT COUNT(DISTINCT i.id) AS total
+      FROM items i
+      LEFT JOIN item_categories ic ON i.id = ic.item_id
+      ${whereClause}
+      `,
+      values
+    );
 
     res.json({
       auctions: results,
@@ -495,6 +556,59 @@ exports.getCompletedAuctions = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      location,
+      orderBy,
+      orderDir,
+    } = req.query;
+
+    const conditions = ["i.ends < NOW()"];
+    const values = [];
+
+    if (category) {
+      conditions.push("ic.category_name LIKE ?");
+      values.push(`%${category}%`);
+    }
+    if (search) {
+      conditions.push("(i.name LIKE ? OR i.description LIKE ?)");
+      values.push(`%${search}%`, `%${search}%`);
+    }
+    if (minPrice) {
+      conditions.push("i.currently >= ?");
+      values.push(minPrice);
+    }
+    if (maxPrice) {
+      conditions.push("i.currently <= ?");
+      values.push(maxPrice);
+    }
+    if (location) {
+      conditions.push("i.location LIKE ?");
+      values.push(`%${location}%`);
+    }
+
+    const whereClause = conditions.length
+      ? "WHERE " + conditions.join(" AND ")
+      : "";
+
+    const allowedColumns = [
+      "id",
+      "currently",
+      "buyPrice",
+      "name",
+      "started",
+      "ends",
+    ];
+    const orderColumn = allowedColumns.includes(orderBy)
+      ? `i.${orderBy}`
+      : "i.id";
+    const orderDirection =
+      orderDir && orderDir.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const orderClause = `ORDER BY ${orderColumn} ${orderDirection}`;
+
     const [results] = await db.promise().query(
       `
       SELECT 
@@ -503,23 +617,27 @@ exports.getCompletedAuctions = async (req, res) => {
         (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
       FROM items i
       LEFT JOIN item_categories ic ON i.id = ic.item_id
-      WHERE i.ends < NOW()
+      ${whereClause}
       GROUP BY i.id
-      ORDER BY i.id DESC
+      ${orderClause}
       LIMIT ? OFFSET ?
-    `,
-      [limit, offset]
+      `,
+      [...values, limit, offset]
     );
 
     results.forEach((item) => {
       item.categories = item.categories ? item.categories.split(", ") : [];
     });
 
-    const [[{ total }]] = await db.promise().query(`
-      SELECT COUNT(*) AS total
-      FROM items
-      WHERE ends < NOW()
-    `);
+    const [[{ total }]] = await db.promise().query(
+      `
+      SELECT COUNT(DISTINCT i.id) AS total
+      FROM items i
+      LEFT JOIN item_categories ic ON i.id = ic.item_id
+      ${whereClause}
+      `,
+      values
+    );
 
     res.json({
       auctions: results,

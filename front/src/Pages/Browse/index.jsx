@@ -21,6 +21,8 @@ function BrowseAuctions() {
     active: 0,
     completed: 0,
   });
+  const [orderBy, setOrderBy] = useState("id"); // Default order by id
+  const [orderDir, setOrderDir] = useState("DESC"); // Default descending
 
   const [role, setRole] = useState("");
   const [tab, setTab] = useState("active");
@@ -52,13 +54,25 @@ function BrowseAuctions() {
   const fetchAuctions = async (tabName, pageNum) => {
     try {
       setLoading(true);
+
+      const params = {
+        page: pageNum,
+        limit: PAGE_LIMIT,
+        category: selectedCategory || undefined,
+        search: searchTerm || undefined,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        location: locationSearch || undefined,
+        orderBy,
+        orderDir,
+      };
+
       let res;
-      if (tabName === "active") res = await getActiveAuctions(pageNum);
-      else res = await getCompletedAuctions(pageNum);
+      if (tabName === "active") res = await getActiveAuctions(params);
+      else res = await getCompletedAuctions(params);
 
       setAuctions(res.auctions);
 
-      // Update current page state
       setCurrentPage((prev) => ({
         ...prev,
         [tabName]: pageNum,
@@ -176,6 +190,18 @@ function BrowseAuctions() {
     return pages;
   };
 
+  const handleSort = (column) => {
+    if (orderBy === column) {
+      // Toggle direction
+      setOrderDir((prev) => (prev === "ASC" ? "DESC" : "ASC"));
+    } else {
+      setOrderBy(column);
+      setOrderDir("ASC"); // Default new column to ascending
+    }
+    // Refetch with new sorting
+    fetchAuctions(tab, currentPage[tab]);
+  };
+
   // Bid modal handlers
   const handleOpenBid = (auction) => {
     setBidError("");
@@ -280,6 +306,7 @@ function BrowseAuctions() {
           )}
         </div>
       </div>
+
       {/* Tabs with counts */}
       <div className={styles.tabContainer}>
         <button
@@ -299,6 +326,7 @@ function BrowseAuctions() {
           Completed ({totalAuctions.completed})
         </button>
       </div>
+
       {loading ? (
         <p>Loading auctions...</p>
       ) : auctions.length === 0 ? (
@@ -344,23 +372,34 @@ function BrowseAuctions() {
               value={locationSearch}
               onChange={(e) => setLocationSearch(e.target.value)}
             />
+
+            {/* Apply Filters Button */}
+            <button
+              onClick={() => {
+                // Always start from page 1 when applying new filters
+                fetchAuctions(tab, 1);
+              }}
+            >
+              Apply Filters
+            </button>
           </div>
 
           {/* Auction Table */}
           <table className={styles.auctionTable}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>First Bid</th>
-                <th>Current Price</th>
-                <th>Buy Price</th>
+                <th onClick={() => handleSort("name")}>Name</th>
+                <th onClick={() => handleSort("first_bid")}>First Bid</th>
+                <th onClick={() => handleSort("currently")}>Current Price</th>
+                <th onClick={() => handleSort("buy_price")}>Buy Price</th>
                 <th>Categories</th>
-                <th>Bids</th>
-                <th>Start</th>
-                <th>End</th>
+                <th onClick={() => handleSort("numberOfBids")}>Bids</th>
+                <th onClick={() => handleSort("started")}>Start</th>
+                <th onClick={() => handleSort("ends")}>End</th>
                 <th>Action</th>
               </tr>
             </thead>
+
             <tbody>
               {auctions.map((a) => (
                 <tr key={a.id}>
