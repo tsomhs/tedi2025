@@ -56,7 +56,12 @@ function MessagingPage() {
 
   return (
     <div className={styles.container}>
-      <h1>Messaging</h1>
+      <div className={styles.header}>
+        <button className={styles.backBtn} onClick={() => navigate(-1)}>
+          ← Back
+        </button>
+        <h1>Messages</h1>
+      </div>
       {newMessagesCount > 0 && (
         <p className={styles.newMsgIndicator}>
           {newMessagesCount} new message{newMessagesCount > 1 ? "s" : ""}

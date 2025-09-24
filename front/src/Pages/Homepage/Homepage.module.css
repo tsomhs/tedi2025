@@ -55,7 +55,7 @@
 }
 
 .button {
-  background-color: #00a86b;
+  background-color: #037537;
   border: none;
   padding: 1rem 2.5rem;
   font-size: 1rem;
@@ -70,4 +70,19 @@
 .button:hover {
   background-color: #007f55;
   box-shadow: 0 4px 12px rgba(0, 127, 85, 0.6);
+}
+
+.messagesIconWrapper {
+  position: absolute;
+  bottom: 15px;
+  right: 20px;
+  font-size: 2.8rem;
+  cursor: pointer;
+  color: rgb(4, 97, 4);
+  transition: transform 0.2s, color 0.2s;
+}
+
+.messagesIconWrapper:hover {
+  transform: scale(1.2);
+  color: #0cbb40;
 }

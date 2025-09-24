@@ -2,11 +2,32 @@
 import { useNavigate } from "react-router-dom";
 import styles from "./Homepage.module.css";
 import { setUserRole } from "../../axios/auth";
-import { useState } from "react";
+import { MdMessage } from "react-icons/md";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function Homepage() {
   const navigate = useNavigate();
   const [loadingRole, setLoadingRole] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/messages/unread-count",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setUnreadCount(res.data.unreadCount);
+      } catch (err) {
+        console.error("Failed to fetch unread messages:", err);
+      }
+    };
+
+    fetchUnread();
+  }, []);
 
   const handleRoleSelect = async (role) => {
     try {
@@ -36,6 +57,17 @@ function Homepage() {
       <span className={styles.backArrow} onClick={() => navigate("/")}>
         ←
       </span>
+
+      <div
+        className={styles.messagesIconWrapper}
+        onClick={() => navigate("/messages")}
+        title="Messages"
+      >
+        <MdMessage />
+        {unreadCount > 0 && (
+          <span className={styles.unreadBadge}>{unreadCount}</span>
+        )}
+      </div>
 
       <div className={styles.header}>
         <h1 className={styles.title}>&nbsp;Cash or Trash&nbsp;</h1>

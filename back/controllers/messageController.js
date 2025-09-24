@@ -63,19 +63,22 @@ exports.getInbox = async (req, res) => {
     const userId = req.user.id;
 
     const query = `
-      SELECT m.id, m.from_user, u.username AS sender_username,
-             m.subject, m.body, m.sent_at, m.is_read, m.chat_id
+      SELECT m.id, m.chat_id, m.from_user, m.to_user, 
+             u.username AS sender_username,
+             m.body, m.sent_at, m.is_read
       FROM messages m
       JOIN users u ON m.from_user = u.id
-      WHERE m.to_user = ? AND m.deleted_by_receiver = 0
+      WHERE m.to_user = ?
+        AND m.deleted_by_receiver = 0
       ORDER BY m.sent_at DESC
     `;
 
-    const [results] = await db.promise().query(query, [userId]);
-    res.json({ inbox: results });
+    const [inbox] = await db.promise().query(query, [userId]);
+
+    res.json({ inbox });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Error loading inbox", err });
+    res.status(500).json({ msg: "Error fetching inbox", err });
   }
 };
 
@@ -85,19 +88,22 @@ exports.getSent = async (req, res) => {
     const userId = req.user.id;
 
     const query = `
-      SELECT m.id, m.to_user, u.username AS recipient_username,
-             m.subject, m.body, m.sent_at, m.chat_id
+      SELECT m.id, m.chat_id, m.from_user, m.to_user, 
+             u.username AS recipient_username,
+             m.body, m.sent_at, m.is_read
       FROM messages m
       JOIN users u ON m.to_user = u.id
-      WHERE m.from_user = ? AND m.deleted_by_sender = 0
+      WHERE m.from_user = ?
+        AND m.deleted_by_sender = 0
       ORDER BY m.sent_at DESC
     `;
 
-    const [results] = await db.promise().query(query, [userId]);
-    res.json({ sent: results });
+    const [sent] = await db.promise().query(query, [userId]);
+
+    res.json({ sent });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: "Error loading sent messages", err });
+    res.status(500).json({ msg: "Error fetching sent messages", err });
   }
 };
 
@@ -217,26 +223,34 @@ exports.getChatMessages = async (req, res) => {
     const userId = req.user.id;
     const chatId = parseInt(req.params.chatId);
 
-    // Fetch all messages for this chat
+    // Fetch only messages that are not deleted for this user
     const query = `
-      SELECT m.id, m.from_user, m.to_user, u1.username AS from_username, u2.username AS to_username,
+      SELECT m.id, m.from_user, m.to_user, 
+             u1.username AS from_username, 
+             u2.username AS to_username,
              m.body, m.sent_at, m.is_read
       FROM messages m
       JOIN users u1 ON m.from_user = u1.id
       JOIN users u2 ON m.to_user = u2.id
-      WHERE m.chat_id = ? AND (m.from_user = ? OR m.to_user = ?)
+      WHERE m.chat_id = ?
+        AND (
+          (m.from_user = ? AND m.deleted_by_sender = 0) OR
+          (m.to_user = ? AND m.deleted_by_receiver = 0)
+        )
       ORDER BY m.sent_at ASC
     `;
 
     const [results] = await db.promise().query(query, [chatId, userId, userId]);
 
     // Mark all messages **from the other user** as read
-    await db
-      .promise()
-      .query(
-        `UPDATE messages SET is_read = 1 WHERE chat_id = ? AND to_user = ? AND is_read = 0`,
-        [chatId, userId]
-      );
+    await db.promise().query(
+      `UPDATE messages 
+         SET is_read = 1 
+         WHERE chat_id = ? 
+           AND to_user = ? 
+           AND is_read = 0`,
+      [chatId, userId]
+    );
 
     res.json({ messages: results });
   } catch (err) {

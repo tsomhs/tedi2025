@@ -2,25 +2,31 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Chat.module.css";
 import axios from "axios";
+import { getUserById } from "../../axios/auth";
 
 function ChatPage() {
-  const { chatId } = useParams(); // actual chat ID (optional for new chat)
+  const { chatId } = useParams();
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [otherUserName, setOtherUserName] = useState(null);
   const [currentChatId, setCurrentChatId] = useState(chatId || null);
 
-  // Load user info
+  // Load current user info
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUserId(res.data.user.id);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("http://localhost:5000/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUserId(res.data.user.id);
+      } catch (err) {
+        console.error("Failed to fetch current user:", err);
+      }
     };
     fetchUser();
   }, []);
@@ -49,14 +55,34 @@ function ChatPage() {
     loadChat();
   }, [currentChatId]);
 
-  // Determine the other participant user ID
+  // Helper: find other participant’s user id
   const getOtherUserId = () => {
-    const msg = messages.find(
-      (m) => m.from_user !== userId || m.to_user !== userId
-    );
-    if (msg) return msg.from_user === userId ? msg.to_user : msg.from_user;
-    return null;
+    if (!userId || !messages.length) return null;
+    const msg = messages[0]; // first message is enough
+    return msg.from_user === userId ? msg.to_user : msg.from_user;
   };
+
+  // Fetch other participant’s name when messages/userId change
+  useEffect(() => {
+    const fetchOtherUser = async () => {
+      if (!userId || !messages.length) return;
+      const otherUserId = getOtherUserId();
+      if (!otherUserId) return;
+
+      try {
+        const userData = await getUserById(otherUserId);
+        // Adjust depending on your API response structure:
+        // e.g., userData.username OR userData.user.username
+        setOtherUserName(
+          userData.username || userData.user?.username || "Unknown"
+        );
+      } catch (err) {
+        console.error("Failed to fetch other user:", err);
+      }
+    };
+
+    fetchOtherUser();
+  }, [userId, messages]);
 
   // Send new message
   const handleSend = async () => {
@@ -68,8 +94,6 @@ function ChatPage() {
 
     try {
       const token = localStorage.getItem("token");
-
-      // Include chat_id if it exists
       const payload = {
         to_user: otherUser,
         body: newMessage,
@@ -83,8 +107,7 @@ function ChatPage() {
       );
 
       const sentMessage = res.data.message;
-      setCurrentChatId(sentMessage.chat_id); // store chat_id for future messages
-
+      setCurrentChatId(sentMessage.chat_id);
       setMessages((prev) => [...prev, sentMessage]);
       setNewMessage("");
     } catch (err) {
@@ -94,7 +117,6 @@ function ChatPage() {
 
   // Delete a message
   const handleDelete = async (messageId) => {
-    console.log("Deleting message ID:", messageId);
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`http://localhost:5000/api/messages/${messageId}`, {
@@ -113,7 +135,7 @@ function ChatPage() {
         <button className={styles.backBtn} onClick={() => navigate(-1)}>
           ← Back
         </button>
-        <h2>Chat</h2>
+        <h2>{otherUserName || "User not found"}</h2>
       </div>
 
       <div className={styles.messagesContainer}>

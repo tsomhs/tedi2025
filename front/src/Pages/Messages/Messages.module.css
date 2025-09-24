@@ -32,6 +32,46 @@ h1 {
   margin-bottom: 20px;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  position: relative; /* needed for absolute positioning of h1 */
+  padding: 10px 20px;
+}
+
+/* Back button on the left */
+.backBtn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  z-index: 1; /* keep above h1 */
+}
+
+/* Center heading */
+.header h1 {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.newMsgIndicator {
+  text-align: center;
+  color: #fff;
+  background: #007bff;
+  font-weight: bold;
+  margin: 10px auto;
+  padding: 6px 12px;
+  border-radius: 6px;
+  width: fit-content;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .tabs button {
   padding: 8px 16px;
   border: none;
