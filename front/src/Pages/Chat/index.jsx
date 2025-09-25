@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Chat.module.css";
 import axios from "axios";
@@ -14,6 +14,17 @@ function ChatPage() {
   const [userId, setUserId] = useState(null);
   const [otherUserName, setOtherUserName] = useState(null);
   const [currentChatId, setCurrentChatId] = useState(chatId || null);
+
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Scroll on messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Load current user info
   useEffect(() => {
@@ -138,7 +149,7 @@ function ChatPage() {
         <h2>{otherUserName || "User not found"}</h2>
       </div>
 
-      <div className={styles.messagesContainer}>
+      <div className={styles.messagesWrapper}>
         {loading ? (
           <p>Loading...</p>
         ) : messages.length ? (
@@ -166,6 +177,7 @@ function ChatPage() {
         ) : (
           <p className={styles.emptyMsg}>No messages yet</p>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className={styles.inputContainer}>

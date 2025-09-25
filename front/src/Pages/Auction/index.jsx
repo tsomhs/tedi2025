@@ -31,6 +31,9 @@ function AuctionPage() {
   const [bidError, setBidError] = useState("");
   const [coords, setCoords] = useState([0, 0]);
   const [user, setUser] = useState("");
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [messageRecipient, setMessageRecipient] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -39,6 +42,45 @@ function AuctionPage() {
     };
     fetchUser();
   }, []);
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) {
+      alert("Message cannot be empty!");
+      return;
+    }
+
+    let toUser =
+      role == "seller" ? auction.winner.bidder_id : auction.seller.id;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const payload = {
+        to_user: toUser, // must be user_id (not username)
+        body: messageText,
+      };
+
+      const res = await axios.post(
+        "http://localhost:5000/api/messages",
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const sentMessage = res.data.message;
+
+      // ✅ close modal
+      setShowMessageModal(false);
+      setMessageText("");
+      setMessageRecipient(null);
+
+      // ✅ redirect to chat page with that user
+      // assuming your chat route looks like: /chat/:chatId
+      navigate(`/chat/${sentMessage.chat_id}`);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      alert("Failed to send message. Try again.");
+    }
+  };
 
   // Fetch auction and bids
   useEffect(() => {
@@ -238,6 +280,18 @@ function AuctionPage() {
     }
   };
 
+  const handleOpenMessageModal = (recipient) => {
+    setMessageRecipient(recipient);
+    setMessageText("");
+    setShowMessageModal(true);
+  };
+
+  const handleCloseMessageModal = () => {
+    setShowMessageModal(false);
+    setMessageText("");
+    setMessageRecipient(null);
+  };
+
   return (
     <div className={styles.container}>
       <span className={styles.backArrow} onClick={() => navigate(-1)}>
@@ -334,7 +388,7 @@ function AuctionPage() {
                 <button
                   className={styles.messageBuyerBtn}
                   onClick={() =>
-                    alert(`Messaging buyer: ${auction.winner.username}`)
+                    handleOpenMessageModal(auction.winner.username)
                   }
                 >
                   Message Buyer
@@ -347,7 +401,7 @@ function AuctionPage() {
                   <button
                     className={styles.messageBuyerBtn}
                     onClick={() =>
-                      alert(`Messaging seller: ${auction.seller_username}`)
+                      handleOpenMessageModal(auction.seller_username)
                     }
                   >
                     Message Seller
@@ -436,6 +490,25 @@ function AuctionPage() {
               <div className={styles.modalButtons}>
                 <button onClick={handlePlaceBid}>Submit Bid</button>
                 <button onClick={handleCloseBid}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Message Modal */}
+        {showMessageModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+              <h2>Send Message to {messageRecipient}</h2>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Type your message here..."
+                className={styles.textarea}
+              />
+              <div className={styles.modalButtons}>
+                <button onClick={handleSendMessage}>Send</button>
+                <button onClick={handleCloseMessageModal}>Cancel</button>
               </div>
             </div>
           </div>

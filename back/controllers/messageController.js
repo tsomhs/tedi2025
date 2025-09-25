@@ -3,11 +3,10 @@
 const db = require("../config/db");
 
 // Send a message
-// controllers/messageController.js
 exports.sendMessage = async (req, res) => {
   try {
     const from_user = req.user.id;
-    const { to_user, subject, body, chat_id } = req.body; // chat_id from frontend (optional)
+    const { to_user, subject, body, chat_id } = req.body;
 
     if (!to_user || !body) {
       return res
@@ -20,10 +19,12 @@ exports.sendMessage = async (req, res) => {
     // If no chat_id provided, check if a conversation already exists
     if (!finalChatId) {
       const [[existingChat]] = await db.promise().query(
-        `SELECT chat_id FROM messages 
-           WHERE (from_user = ? AND to_user = ?) 
-              OR (from_user = ? AND to_user = ?) 
-           ORDER BY sent_at ASC LIMIT 1`,
+        `SELECT chat_id 
+           FROM messages 
+          WHERE ((from_user = ? AND to_user = ?) OR (from_user = ? AND to_user = ?))
+            AND deleted_by_sender = 0 AND deleted_by_receiver = 0
+          ORDER BY sent_at ASC 
+          LIMIT 1`,
         [from_user, to_user, to_user, from_user]
       );
 
@@ -41,14 +42,17 @@ exports.sendMessage = async (req, res) => {
     // Insert message with chat_id
     const [result] = await db.promise().query(
       `INSERT INTO messages (from_user, to_user, subject, body, chat_id)
-         VALUES (?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?)`,
       [from_user, to_user, subject || null, body, finalChatId]
     );
 
     // Fetch inserted message
-    const [[message]] = await db
-      .promise()
-      .query(`SELECT * FROM messages WHERE id = ?`, [result.insertId]);
+    const [[message]] = await db.promise().query(
+      `SELECT * 
+           FROM messages 
+          WHERE id = ? AND deleted_by_sender = 0 AND deleted_by_receiver = 0`,
+      [result.insertId]
+    );
 
     res.json({ msg: "Message sent successfully", message });
   } catch (err) {
@@ -113,12 +117,13 @@ exports.markAsRead = async (req, res) => {
     const userId = req.user.id;
     const messageId = req.params.id;
 
-    const query = `
-      UPDATE messages
-      SET is_read = 1
-      WHERE id = ? AND to_user = ?`;
-
-    await db.promise().query(query, [messageId, userId]);
+    await db.promise().query(
+      `UPDATE messages
+          SET is_read = 1
+        WHERE id = ? AND to_user = ? 
+          AND deleted_by_receiver = 0`,
+      [messageId, userId]
+    );
 
     res.json({ msg: "Message marked as read" });
   } catch (err) {
@@ -139,20 +144,22 @@ exports.getConversation = async (req, res) => {
       FROM messages m
       JOIN users u1 ON m.from_user = u1.id
       JOIN users u2 ON m.to_user = u2.id
-      WHERE (m.from_user = ? AND m.to_user = ?) OR (m.from_user = ? AND m.to_user = ?)
+      WHERE ((m.from_user = ? AND m.to_user = ?) OR (m.from_user = ? AND m.to_user = ?))
+        AND ((m.from_user = ? AND m.deleted_by_sender = 0) OR (m.to_user = ? AND m.deleted_by_receiver = 0))
       ORDER BY m.sent_at ASC`;
 
     const [messages] = await db
       .promise()
-      .query(query, [userId, otherUserId, otherUserId, userId]);
+      .query(query, [userId, otherUserId, otherUserId, userId, userId, userId]);
 
     // Mark all messages from the other user as read
-    await db
-      .promise()
-      .query(
-        `UPDATE messages SET is_read = 1 WHERE from_user = ? AND to_user = ?`,
-        [otherUserId, userId]
-      );
+    await db.promise().query(
+      `UPDATE messages 
+          SET is_read = 1 
+        WHERE from_user = ? AND to_user = ? 
+          AND deleted_by_receiver = 0`,
+      [otherUserId, userId]
+    );
 
     res.json({ messages });
   } catch (err) {
@@ -167,7 +174,6 @@ exports.deleteMessage = async (req, res) => {
     const userId = req.user.id;
     const messageId = parseInt(req.params.id);
 
-    // Get message
     const [[msg]] = await db
       .promise()
       .query(`SELECT * FROM messages WHERE id = ?`, [messageId]);
@@ -205,7 +211,9 @@ exports.getUnreadCount = async (req, res) => {
     const query = `
       SELECT COUNT(*) AS unreadCount
       FROM messages
-      WHERE to_user = ? AND is_read = 0 AND deleted_by_receiver = 0
+      WHERE to_user = ? 
+        AND is_read = 0 
+        AND deleted_by_receiver = 0
     `;
 
     const [[{ unreadCount }]] = await db.promise().query(query, [userId]);
@@ -223,7 +231,6 @@ exports.getChatMessages = async (req, res) => {
     const userId = req.user.id;
     const chatId = parseInt(req.params.chatId);
 
-    // Fetch only messages that are not deleted for this user
     const query = `
       SELECT m.id, m.from_user, m.to_user, 
              u1.username AS from_username, 
@@ -245,10 +252,11 @@ exports.getChatMessages = async (req, res) => {
     // Mark all messages **from the other user** as read
     await db.promise().query(
       `UPDATE messages 
-         SET is_read = 1 
-         WHERE chat_id = ? 
-           AND to_user = ? 
-           AND is_read = 0`,
+          SET is_read = 1 
+        WHERE chat_id = ? 
+          AND to_user = ? 
+          AND is_read = 0
+          AND deleted_by_receiver = 0`,
       [chatId, userId]
     );
 
