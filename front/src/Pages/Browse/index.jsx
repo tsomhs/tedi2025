@@ -412,14 +412,13 @@ function BrowseAuctions() {
                       ? (() => {
                           const text = Array.isArray(a.categories)
                             ? a.categories.join(", ")
-                            : a.categories; // just in case backend sends string
+                            : a.categories;
                           return text.length > 40
                             ? text.slice(0, 40) + "..."
                             : text;
                         })()
                       : "-"}
                   </td>
-
                   <td>{a.numberOfBids}</td>
                   <td>{formatDate(a.started)}</td>
                   <td>{formatDate(a.ends)}</td>
@@ -449,6 +448,15 @@ function BrowseAuctions() {
                   </td>
                 </tr>
               ))}
+
+              {/* Add empty rows to fill table */}
+              {Array.from({ length: PAGE_LIMIT - auctions.length }).map(
+                (_, idx) => (
+                  <tr key={`empty-${idx}`} className={styles.emptyRow}>
+                    <td colSpan="9">&nbsp;</td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
 

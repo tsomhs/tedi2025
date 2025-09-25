@@ -406,38 +406,82 @@ exports.searchAuctions = (req, res) => {
 
 exports.getAllAuctions = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      location,
+      orderBy,
+      orderDir,
+    } = req.query;
+
+    const conditions = [];
+    const values = [];
+
+    if (category) {
+      conditions.push("ic.category_name LIKE ?");
+      values.push(`%${category}%`);
+    }
+    if (search) {
+      conditions.push("(i.name LIKE ? OR i.description LIKE ?)");
+      values.push(`%${search}%`, `%${search}%`);
+    }
+    if (minPrice) {
+      conditions.push("i.currently >= ?");
+      values.push(minPrice);
+    }
+    if (maxPrice) {
+      conditions.push("i.currently <= ?");
+      values.push(maxPrice);
+    }
+    if (location) {
+      conditions.push("i.location LIKE ?");
+      values.push(`%${location}%`);
+    }
+
+    const whereClause = conditions.length
+      ? "WHERE " + conditions.join(" AND ")
+      : "";
+
+    const allowedColumns = [
+      "id",
+      "currently",
+      "buy_price",
+      "name",
+      "started",
+      "ends",
+    ];
+    const orderColumn = allowedColumns.includes(orderBy)
+      ? `i.${orderBy}`
+      : "i.id";
+    const orderDirection =
+      orderDir && orderDir.toUpperCase() === "ASC" ? "ASC" : "DESC";
+    const orderClause = `ORDER BY ${orderColumn} ${orderDirection}`;
 
     const [results] = await db.promise().query(
       `
-    SELECT 
-      i.*,
-      GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories,
-      (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
-    FROM items i
-    LEFT JOIN item_categories ic ON i.id = ic.item_id
-    GROUP BY i.id
-    ORDER BY i.id DESC
-    LIMIT ? OFFSET ?
-  `,
-      [limit, offset]
+      SELECT 
+        i.*,
+        GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories,
+        (SELECT COUNT(*) FROM bids b WHERE b.item_id = i.id) AS numberOfBids
+      FROM items i
+      LEFT JOIN item_categories ic ON i.id = ic.item_id
+      ${whereClause}
+      GROUP BY i.id
+      ${orderClause}
+      `,
+      values
     );
-    // turn "cat1||cat2||cat3" into ["cat1", "cat2", "cat3"]
-    results.forEach((item) => {
-      item.categories = item.categories ? item.categories.split("||") : [];
-    });
 
-    const [[{ total }]] = await db.promise().query(`
-      SELECT COUNT(*) AS total FROM items
-    `);
+    // Convert categories to array
+    results.forEach((item) => {
+      item.categories = item.categories ? item.categories.split(", ") : [];
+    });
 
     res.json({
       auctions: results,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      total: results.length,
     });
   } catch (err) {
     console.error(err);

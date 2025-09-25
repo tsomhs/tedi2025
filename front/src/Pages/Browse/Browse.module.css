@@ -418,3 +418,8 @@
   align-items: center;
   font-weight: bold;
 }
+
+.emptyRow {
+  height: 40px; /* adjust as needed */
+  background-color: #f9f9f9; /* optional */
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styles from "./Admin.module.css";
 import { useNavigate } from "react-router-dom";
 import { getAllUsers, getAllAuctions } from "../../axios/auth.jsx";
@@ -9,10 +9,22 @@ function Admin() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
+  // Fetch users and create lightweight array with fullData
   useEffect(() => {
     const fetchUsers = async () => {
-      const data = await getAllUsers();
-      setUsers(data);
+      try {
+        const data = await getAllUsers();
+        const lightweight = data.map((u) => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          approved: u.approved,
+          fullData: u, // store full user object
+        }));
+        setUsers(lightweight);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
     };
     fetchUsers();
   }, []);
@@ -25,13 +37,15 @@ function Admin() {
   };
 
   const handleRowClick = (user) => {
-    navigate(`/admin/user/${user.id}`, { state: { user } });
+    // Navigate with full user data
+    navigate(`/admin/user/${user.id}`, { state: { user: user.fullData } });
   };
 
-  // Safe highlight function returning JSX
+  // Safe highlightMatch function
   const highlightMatch = (text, query) => {
-    if (!query) return text;
-    const parts = text.toString().split(new RegExp(`(${query})`, "gi"));
+    if (!query || !text) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // escape regex
+    const parts = text.toString().split(new RegExp(`(${escaped})`, "gi"));
     return parts.map((part, index) =>
       part.toLowerCase() === query.toLowerCase() ? (
         <mark key={index} className={styles.highlight}>
@@ -43,47 +57,55 @@ function Admin() {
     );
   };
 
-  const filteredUsers = users
-    .map((user) => ({
-      user,
-      match: Object.values({
-        ...user,
-        approved: user.approved === 1 ? "Approved" : "Pending", // consider status text for search
-      }).some((value) =>
-        value.toString().toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    }))
-    .sort((a, b) => {
-      if (a.match && !b.match) return -1;
-      if (!a.match && b.match) return 1;
+  // Memoized filtered & sorted users
+  const filteredUsers = useMemo(() => {
+    return users
+      .filter((user) => {
+        const valuesToCheck = {
+          id: user.id,
+          username: user.username,
+          approved: user.approved === 1 ? "Approved" : "Pending",
+        };
 
-      let valA = a.user[sortConfig.key];
-      let valB = b.user[sortConfig.key];
+        // Include email only if id <= 8 or id >= 13430
+        if (user.id <= 8 || user.id >= 13430) {
+          valuesToCheck.email = user.email;
+        }
 
-      // Only convert approved to text
-      if (sortConfig.key === "approved") {
-        valA = valA === 1 ? "Approved" : "Pending";
-        valB = valB === 1 ? "Approved" : "Pending";
-      }
+        return Object.values(valuesToCheck).some((value) =>
+          (value ?? "")
+            .toString()
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+        );
+      })
+      .sort((a, b) => {
+        let valA = a[sortConfig.key] ?? "";
+        let valB = b[sortConfig.key] ?? "";
 
-      const isNumber = !isNaN(valA) && !isNaN(valB);
+        if (sortConfig.key === "approved") {
+          valA = valA === 1 ? "Approved" : "Pending";
+          valB = valB === 1 ? "Approved" : "Pending";
+        }
 
-      if (isNumber) {
-        return sortConfig.direction === "asc"
-          ? Number(valA) - Number(valB)
-          : Number(valB) - Number(valA);
-      } else {
-        return sortConfig.direction === "asc"
-          ? valA.toString().localeCompare(valB.toString())
-          : valB.toString().localeCompare(valA.toString());
-      }
-    })
-    .map(({ user }) => user);
+        const isNumber = !isNaN(valA) && !isNaN(valB);
+
+        if (isNumber) {
+          return sortConfig.direction === "asc"
+            ? Number(valA) - Number(valB)
+            : Number(valB) - Number(valA);
+        } else {
+          return sortConfig.direction === "asc"
+            ? valA.toString().localeCompare(valB.toString())
+            : valB.toString().localeCompare(valA.toString());
+        }
+      });
+  }, [users, searchQuery, sortConfig]);
 
   const exportAuctionsJSON = async () => {
     try {
       const data = await getAllAuctions();
-      const jsonStr = JSON.stringify(data, null, 2); // pretty print
+      const jsonStr = JSON.stringify(data, null, 2);
 
       const blob = new Blob([jsonStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -103,12 +125,11 @@ function Admin() {
     try {
       const data = await getAllAuctions();
 
-      // Basic XML conversion
       let xml = "<auctions>\n";
       data.auctions.forEach((a) => {
         xml += `  <auction>\n`;
         Object.entries(a).forEach(([key, value]) => {
-          xml += `    <${key}>${value}</${key}>\n`;
+          xml += `    <${key}>${value ?? ""}</${key}>\n`;
         });
         xml += `  </auction>\n`;
       });
@@ -127,6 +148,7 @@ function Admin() {
       console.error("Error exporting XML:", err);
     }
   };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -141,7 +163,6 @@ function Admin() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        {/* Export buttons */}
         <div className={styles.exportButtons}>
           <button onClick={exportAuctionsJSON} className={styles.exportBtn}>
             Export JSON
@@ -181,7 +202,9 @@ function Admin() {
             >
               <td>{highlightMatch(user.id, searchQuery)}</td>
               <td>{highlightMatch(user.username, searchQuery)}</td>
-              <td>{highlightMatch(user.email, searchQuery)}</td>
+              <td>
+                {user.email ? highlightMatch(user.email, searchQuery) : "-"}
+              </td>
               <td>
                 <span
                   className={
