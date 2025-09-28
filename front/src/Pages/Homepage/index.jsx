@@ -1,7 +1,7 @@
 // src/pages/Home/Home.jsx
 import { useNavigate } from "react-router-dom";
 import styles from "./Homepage.module.css";
-import { setUserRole } from "../../axios/auth";
+import { setUserRole, getRecommendations } from "../../axios/auth";
 import { MdMessage } from "react-icons/md";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -10,6 +10,26 @@ function Homepage() {
   const navigate = useNavigate();
   const [loadingRole, setLoadingRole] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [recs, setRecs] = useState([]);
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          "http://localhost:5000/api/recommendations/top",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setRecs(res.data.items || []); // ✅ fixed
+        console.log(res.data);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+      }
+    };
+    fetchRecs();
+  }, []);
 
   const token = localStorage.getItem("token");
 
@@ -103,6 +123,27 @@ function Homepage() {
             👀 Visitor
           </button>
         </div>
+        {recs.length === 0 ? (
+          <p>No recommendations yet. Start bidding!</p>
+        ) : (
+          <div className={styles.recsGrid}>
+            <h2 className={styles.recsTitle}>Recommended for you</h2>
+
+            {recs.map((a) => (
+              <div
+                key={a.id}
+                className={styles.recCard}
+                onClick={() => navigate(`/my-auctions/${a.id}`)}
+              >
+                <h3>{a.name}</h3>
+                <p>Current: {a.currently || a.first_bid} </p>
+                <p>Buy Price: {a.buy_price} </p>
+                <p>Ends: {new Date(a.ends).toLocaleString()}</p>
+                <p>Categories: {a.categories?.join(", ") || "N/A"}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

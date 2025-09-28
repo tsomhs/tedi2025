@@ -17,6 +17,12 @@ router.get("/count", auctionController.getAuctionCounts);
 // Αναζήτηση δημοπρασιών με φίλτρα
 router.get("/search", auctionController.searchAuctions);
 
+router.get(
+  "/recommendations",
+  verifyToken,
+  auctionController.getRecommendations
+);
+
 // Route δοκιμής
 router.get("/", (req, res) => {
   res.send("Η route /api/auctions λειτουργεί σωστά");

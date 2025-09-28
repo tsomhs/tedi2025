@@ -4,10 +4,10 @@ const mysql = require("mysql2");
 
 // Δημιουργεί τη σύνδεση με τη MySQL
 const db = mysql.createConnection({
-  host: "localhost", //Αν τρέχεις τοπικά
-  user: "root", //Χρήστης MySQL (π.χ. root)
-  password: "9004", // Ο κωδικός σου στη MySQL
-  database: "auction_db", // Το όνομα της βάσης σου
+  host: "localhost",
+  user: "root",
+  password: "9004",
+  database: "auction_db",
   dateStrings: true,
 });
 

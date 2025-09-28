@@ -74,6 +74,23 @@ function AuctionPage() {
     }
   };
 
+  useEffect(() => {
+    const logVisit = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        await axios.post(
+          `http://localhost:5000/api/recommendations/visit/${id}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Failed to log visit:", err);
+      }
+    };
+
+    if (id) logVisit();
+  }, [id]);
+
   // Fetch auction + bids
   useEffect(() => {
     const fetchAuction = async () => {

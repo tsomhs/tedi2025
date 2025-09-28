@@ -828,3 +828,54 @@ exports.getUserAuctions = async (req, res) => {
     return res.status(500).json({ msg: "Server error fetching your auctions" });
   }
 };
+
+// controllers/auctionController.js
+exports.getRecommendations = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // find categories from auctions user has bid on or won
+    const [userCats] = await db.promise().query(
+      `SELECT DISTINCT ic.category_name
+       FROM bids b
+       JOIN items i ON b.item_id = i.id
+       JOIN item_categories ic ON i.id = ic.item_id
+       WHERE b.bidder_id = ?
+       UNION
+       SELECT DISTINCT ic.category_name
+       FROM items i
+       JOIN item_categories ic ON i.id = ic.item_id
+       WHERE i.winner_id = ?`,
+      [userId, userId]
+    );
+
+    if (userCats.length === 0) {
+      return res.json({ recommendations: [] });
+    }
+
+    const categories = userCats.map((c) => c.category_name);
+
+    const [auctions] = await db.promise().query(
+      `SELECT i.*, u.username AS seller_username,
+              GROUP_CONCAT(ic.category_name SEPARATOR ', ') AS categories
+       FROM items i
+       JOIN users u ON i.seller_id = u.id
+       JOIN item_categories ic ON i.id = ic.item_id
+       WHERE NOW() BETWEEN i.started AND i.ends
+         AND ic.category_name IN (?)
+       GROUP BY i.id
+       ORDER BY i.ends ASC
+       LIMIT 10`,
+      [categories]
+    );
+
+    auctions.forEach((a) => {
+      a.categories = a.categories ? a.categories.split(", ") : [];
+    });
+
+    res.json({ recommendations: auctions });
+  } catch (err) {
+    console.error("Error fetching recommendations:", err);
+    res.status(500).json({ msg: "Error fetching recommendations" });
+  }
+};

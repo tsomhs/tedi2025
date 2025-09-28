@@ -410,3 +410,27 @@ export async function getMyAuctions() {
     };
   }
 }
+
+// Get personalized auction recommendations
+export async function getRecommendations() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+
+    const res = await axios.get(
+      "http://localhost:5000/api/auctions/recommendations",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return res.data; // { recommendations: [...] }
+  } catch (err) {
+    console.error("Error fetching recommendations:", err);
+    return {
+      success: false,
+      msg: err.response?.data?.msg || "Error fetching recommendations",
+      recommendations: [],
+    };
+  }
+}

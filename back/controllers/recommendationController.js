@@ -7,16 +7,23 @@
 // Απαιτεί tables: users, items, bids, view_history.
 // Συμβατό με ρόλους: 'admin' / 'seller' / 'bidder' / 'visitor'.
 
-const db = require('../config/db');
+const db = require("../config/db");
 
 //helpers
 function randn(mean = 0, std = 0.1) {
-  let u = 0, v = 0;
+  let u = 0,
+    v = 0;
   while (u === 0) u = Math.random();
   while (v === 0) v = Math.random();
-  return mean + std * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return (
+    mean + std * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
+  );
 }
-function dot(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]*b[i]; return s; }
+function dot(a, b) {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+  return s;
+}
 
 //DB fetch
 function fetchData() {
@@ -54,21 +61,22 @@ function fetchData() {
 
 function buildInteractions(raw, weightBids = 1.0, weightViews = 0.3) {
   const { users, items, bids, views } = raw;
-  const u2idx = new Map(), i2idx = new Map();
+  const u2idx = new Map(),
+    i2idx = new Map();
   users.forEach((u, idx) => u2idx.set(u.id, idx));
   items.forEach((it, idx) => i2idx.set(it.id, idx));
 
-  const key = (u,i) => `${u}::${i}`;
+  const key = (u, i) => `${u}::${i}`;
   const strengths = new Map();
 
-  bids.forEach(r => {
+  bids.forEach((r) => {
     if (!u2idx.has(r.user_id) || !i2idx.has(r.item_id)) return;
     const s = weightBids * Math.log(1 + Number(r.cnt || 1));
     const k = key(r.user_id, r.item_id);
     strengths.set(k, (strengths.get(k) || 0) + s);
   });
 
-  views.forEach(r => {
+  views.forEach((r) => {
     if (!u2idx.has(r.user_id) || !i2idx.has(r.item_id)) return;
     const s = weightViews * Math.log(1 + Number(r.cnt || 1));
     const k = key(r.user_id, r.item_id);
@@ -77,17 +85,32 @@ function buildInteractions(raw, weightBids = 1.0, weightViews = 0.3) {
 
   const interactions = [];
   strengths.forEach((val, k) => {
-    const [uId, iId] = k.split('::').map(Number);
-    interactions.push({ uId, iId, u: u2idx.get(uId), i: i2idx.get(iId), r: val });
+    const [uId, iId] = k.split("::").map(Number);
+    interactions.push({
+      uId,
+      iId,
+      u: u2idx.get(uId),
+      i: i2idx.get(iId),
+      r: val,
+    });
   });
 
   return { users, items, u2idx, i2idx, interactions };
 }
 
 //MF(SGD)
-function trainMF(interactions, nUsers, nItems, { factors = 20, lr = 0.02, reg = 0.02, epochs = 30 } = {}) {
-  const P = Array.from({ length: nUsers }, () => Array.from({ length: factors }, () => randn(0, 0.1)));
-  const Q = Array.from({ length: nItems }, () => Array.from({ length: factors }, () => randn(0, 0.1)));
+function trainMF(
+  interactions,
+  nUsers,
+  nItems,
+  { factors = 20, lr = 0.02, reg = 0.02, epochs = 30 } = {}
+) {
+  const P = Array.from({ length: nUsers }, () =>
+    Array.from({ length: factors }, () => randn(0, 0.1))
+  );
+  const Q = Array.from({ length: nItems }, () =>
+    Array.from({ length: factors }, () => randn(0, 0.1))
+  );
 
   for (let ep = 0; ep < epochs; ep++) {
     // Fisher-Yates shuffle
@@ -96,10 +119,13 @@ function trainMF(interactions, nUsers, nItems, { factors = 20, lr = 0.02, reg = 
       [interactions[k], interactions[j]] = [interactions[j], interactions[k]];
     }
     for (const obs of interactions) {
-      const pu = P[obs.u], qi = Q[obs.i];
-      const pred = dot(pu, qi), err = obs.r - pred;
+      const pu = P[obs.u],
+        qi = Q[obs.i];
+      const pred = dot(pu, qi),
+        err = obs.r - pred;
       for (let f = 0; f < pu.length; f++) {
-        const puf = pu[f], qif = qi[f];
+        const puf = pu[f],
+          qif = qi[f];
         pu[f] += lr * (err * qif - reg * puf);
         qi[f] += lr * (err * puf - reg * qif);
       }
@@ -111,14 +137,19 @@ function trainMF(interactions, nUsers, nItems, { factors = 20, lr = 0.02, reg = 
 function recommendForUser(userId, state, topN = 5) {
   const { users, items, u2idx, i2idx, interactions, P, Q } = state;
   if (!u2idx.has(userId)) return [];
-  const u = u2idx.get(userId), pu = P[u];
+  const u = u2idx.get(userId),
+    pu = P[u];
 
   //items που είδε/πείραξε ο χρήστης
-  const seen = new Set(interactions.filter(x => x.uId === userId).map(x => x.iId));
+  const seen = new Set(
+    interactions.filter((x) => x.uId === userId).map((x) => x.iId)
+  );
 
-    //μόνο ενεργα items
+  //μόνο ενεργα items
   const now = new Date();
-  const active = items.filter(it => new Date(it.started) <= now && now < new Date(it.ends));
+  const active = items.filter(
+    (it) => new Date(it.started) <= now && now < new Date(it.ends)
+  );
 
   const scored = [];
   for (const it of active) {
@@ -128,24 +159,43 @@ function recommendForUser(userId, state, topN = 5) {
     scored.push([it.id, dot(pu, Q[i])]);
   }
   scored.sort((a, b) => b[1] - a[1]);
-  return scored.slice(0, topN).map(x => x[0]);
+  return scored.slice(0, topN).map((x) => x[0]);
 }
 
 function fetchItemsByIds(ids) {
   return new Promise((resolve, reject) => {
     if (!ids.length) return resolve([]);
-    const placeholders = ids.map(() => '?').join(',');
+    const placeholders = ids.map(() => "?").join(",");
     const q = `
       SELECT i.*, u.username AS seller_username
       FROM items i
       JOIN users u ON i.seller_id = u.id
       WHERE i.id IN (${placeholders})
     `;
-    db.query(q, ids, (err, rows) => {
+    db.query(q, ids, async (err, rows) => {
       if (err) return reject(err);
+
+      // ✅ also fetch categories
+      const results = await Promise.all(
+        rows.map(async (item) => {
+          return new Promise((res, rej) => {
+            db.query(
+              "SELECT category_name FROM item_categories WHERE item_id = ?",
+              [item.id],
+              (err2, cats) => {
+                if (err2) return rej(err2);
+                res({ ...item, categories: cats.map((c) => c.category_name) });
+              }
+            );
+          });
+        })
+      );
+
+      // preserve order
       const order = new Map(ids.map((id, idx) => [id, idx]));
-      rows.sort((a, b) => order.get(a.id) - order.get(b.id));
-      resolve(rows);
+      results.sort((a, b) => order.get(a.id) - order.get(b.id));
+
+      resolve(results);
     });
   });
 }
@@ -165,9 +215,30 @@ function fetchPopular(limit = 5) {
       ORDER BY popularity DESC
       LIMIT ?
     `;
-    db.query(q, [limit], (err, rows) => {
+    db.query(q, [limit], async (err, rows) => {
       if (err) return reject(err);
-      resolve(rows);
+
+      // attach categories like in fetchItemsByIds
+      const results = await Promise.all(
+        rows.map(
+          (item) =>
+            new Promise((res, rej) => {
+              db.query(
+                "SELECT category_name FROM item_categories WHERE item_id = ?",
+                [item.id],
+                (err2, cats) => {
+                  if (err2) return rej(err2);
+                  res({
+                    ...item,
+                    categories: cats.map((c) => c.category_name),
+                  });
+                }
+              );
+            })
+        )
+      );
+
+      resolve(results);
     });
   });
 }
@@ -182,29 +253,38 @@ exports.getTopRecommendations = async (req, res) => {
     const { users, items, u2idx, i2idx, interactions } = buildInteractions(raw);
 
     const hasUser = u2idx.has(userId);
-    const userInterCnt = interactions.filter(x => x.uId === userId).length;
+    const userInterCnt = interactions.filter((x) => x.uId === userId).length;
 
     if (!hasUser || userInterCnt === 0) {
       const popular = await fetchPopular(limit);
-      return res.json({ mode: 'cold-start', items: popular });
+      return res.json({ mode: "cold-start", items: popular });
     }
 
     const { P, Q } = trainMF(interactions, users.length, items.length, {
-      factors: 20, lr: 0.02, reg: 0.02, epochs: 30
+      factors: 20,
+      lr: 0.02,
+      reg: 0.02,
+      epochs: 30,
     });
 
-    const topIds = recommendForUser(userId, { users, items, u2idx, i2idx, interactions, P, Q }, limit);
+    const topIds = recommendForUser(
+      userId,
+      { users, items, u2idx, i2idx, interactions, P, Q },
+      limit
+    );
 
     if (topIds.length === 0) {
       const popular = await fetchPopular(limit);
-      return res.json({ mode: 'fallback-popular', items: popular });
+      return res.json({ mode: "fallback-popular", items: popular });
     }
 
     const recItems = await fetchItemsByIds(topIds);
-    res.json({ mode: 'personalized', items: recItems });
+    res.json({ mode: "personalized", items: recItems });
   } catch (err) {
-    console.error('Recommendation error:', err);
-    res.status(500).json({ msg: 'Server error generating recommendations', err });
+    console.error("Recommendation error:", err);
+    res
+      .status(500)
+      .json({ msg: "Server error generating recommendations", err });
   }
 };
 
@@ -212,11 +292,12 @@ exports.getTopRecommendations = async (req, res) => {
 exports.logVisit = (req, res) => {
   const userId = req.user.id;
   const itemId = Number(req.params.itemId);
-  if (!itemId) return res.status(400).json({ msg: 'Invalid itemId' });
+  if (!itemId) return res.status(400).json({ msg: "Invalid itemId" });
 
   const q = `INSERT INTO view_history (user_id, item_id, viewed_at) VALUES (?, ?, NOW())`;
   db.query(q, [userId, itemId], (err) => {
-    if (err) return res.status(500).json({ msg: 'DB error logging visit', err });
-    res.json({ msg: 'Visit logged', userId, itemId });
+    if (err)
+      return res.status(500).json({ msg: "DB error logging visit", err });
+    res.json({ msg: "Visit logged", userId, itemId });
   });
 };
