@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { placeBid, getUserRole, getOwnInfo } from "../../axios/auth";
 import formatDate from "../../Utils/formatDate";
-import styles from "./Auction.module.css"; // your CSS module
+import styles from "./Auction.module.css"; // CSS module
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 
-// Optional: fix default marker icon issue in React-Leaflet
+// Fix React-Leaflet default marker issue
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -16,11 +15,11 @@ L.Icon.Default.mergeOptions({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
+
 function AuctionPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // All hooks at the top
   const [role, setRole] = useState("");
   const [auction, setAuction] = useState(null);
   const [bids, setBids] = useState([]);
@@ -35,6 +34,7 @@ function AuctionPage() {
   const [messageText, setMessageText] = useState("");
   const [messageRecipient, setMessageRecipient] = useState(null);
 
+  // Load current user
   useEffect(() => {
     const fetchUser = async () => {
       const infoRes = await getOwnInfo();
@@ -43,6 +43,7 @@ function AuctionPage() {
     fetchUser();
   }, []);
 
+  // Send message
   const handleSendMessage = async () => {
     if (!messageText.trim()) {
       alert("Message cannot be empty!");
@@ -50,15 +51,11 @@ function AuctionPage() {
     }
 
     let toUser =
-      role == "seller" ? auction.winner.bidder_id : auction.seller.id;
+      role === "seller" ? auction.winner.bidder_id : auction.seller.id;
 
     try {
       const token = localStorage.getItem("token");
-
-      const payload = {
-        to_user: toUser, // must be user_id (not username)
-        body: messageText,
-      };
+      const payload = { to_user: toUser, body: messageText };
 
       const res = await axios.post(
         "http://localhost:5000/api/messages",
@@ -67,14 +64,9 @@ function AuctionPage() {
       );
 
       const sentMessage = res.data.message;
-
-      // ✅ close modal
       setShowMessageModal(false);
       setMessageText("");
       setMessageRecipient(null);
-
-      // ✅ redirect to chat page with that user
-      // assuming your chat route looks like: /chat/:chatId
       navigate(`/chat/${sentMessage.chat_id}`);
     } catch (err) {
       console.error("Error sending message:", err);
@@ -82,17 +74,15 @@ function AuctionPage() {
     }
   };
 
-  // Fetch auction and bids
+  // Fetch auction + bids
   useEffect(() => {
     const fetchAuction = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/auctions/${id}`);
         setAuction(res.data);
-        console.log(res.data);
 
         const bidsRes = await axios.get(`http://localhost:5000/api/bids/${id}`);
         setBids(bidsRes.data.bids);
-        console.log(bidsRes.data);
       } catch (err) {
         console.error(err);
         setError(
@@ -105,6 +95,7 @@ function AuctionPage() {
     fetchAuction();
   }, [id]);
 
+  // Fetch role
   useEffect(() => {
     const fetchRole = async () => {
       const res = await getUserRole();
@@ -113,6 +104,7 @@ function AuctionPage() {
     fetchRole();
   }, []);
 
+  // Geocode coords
   useEffect(() => {
     const getCoordsFromLocation = async (loc, country) => {
       try {
@@ -134,13 +126,11 @@ function AuctionPage() {
     const resolveCoords = async () => {
       if (auction) {
         if (auction.latitude && auction.longitude) {
-          // Use DB coords
           setCoords([
             parseFloat(auction.latitude),
             parseFloat(auction.longitude),
           ]);
         } else if (auction.location || auction.country) {
-          // Fallback to geocode location+country
           const newCoords = await getCoordsFromLocation(
             auction.location || "",
             auction.country || ""
@@ -187,22 +177,17 @@ function AuctionPage() {
       )
       .then((res) => {
         alert(res.data.msg);
-
-        // ✅ Update auction state: mark sold + set winner
         const winnerData = res.data.winner || {
           username: "You",
           rating: 0,
           amount: auction.buy_price,
         };
-
         setAuction((prev) => ({
           ...prev,
           sold: true,
-          currently: auction.buy_price, // update current price
+          currently: auction.buy_price,
           winner: winnerData,
         }));
-
-        // ✅ Add latest bid to bids table locally
         setBids((prev) => [
           {
             amount: auction.buy_price,
@@ -222,7 +207,7 @@ function AuctionPage() {
   const handlePlaceBid = async () => {
     const bidValue = parseFloat(bidAmount);
     const currentPrice = parseFloat(auction.currently || auction.first_bid);
-    const buyPrice = parseFloat(auction.buy_price); // ✅ define it here
+    const buyPrice = parseFloat(auction.buy_price);
 
     if (isNaN(bidValue) || bidValue <= currentPrice) {
       setBidError(
@@ -232,7 +217,7 @@ function AuctionPage() {
     }
 
     if (buyPrice && bidValue >= buyPrice) {
-      handleBuy(auction); // ✅ pass auction, not currentAuction
+      handleBuy(auction);
       handleCloseBid();
       return;
     }
@@ -247,15 +232,11 @@ function AuctionPage() {
 
       if (result.success) {
         alert(result.msg);
-
-        // ✅ update auction state (price + bid count)
         setAuction((prev) => ({
           ...prev,
           currently: bidValue,
           numberOfBids: (prev.numberOfBids || 0) + 1,
         }));
-
-        // ✅ prepend new bid to list
         setBids((prev) => [
           {
             amount: bidValue,
@@ -265,7 +246,6 @@ function AuctionPage() {
           },
           ...prev,
         ]);
-
         setBidAmount("");
         setBidError("");
         setShowBidModal(false);
@@ -297,11 +277,11 @@ function AuctionPage() {
       <span className={styles.backArrow} onClick={() => navigate(-1)}>
         ←
       </span>
-      <div className={styles.page} style={{ display: "flex", gap: "2rem" }}>
-        <div className={styles.card} style={{ flex: 2 }}>
+      <div className={styles.page}>
+        {/* Left Card */}
+        <div className={styles.card}>
           <h1 className={styles.title}>{auction.name}</h1>
 
-          {/* Auction info */}
           <div className={styles.infoSection}>
             <p>
               <strong>First Bid:</strong> ${auction.first_bid}
@@ -357,7 +337,6 @@ function AuctionPage() {
             </p>
           </div>
 
-          {/* Bid Button */}
           {role === "buyer" && !auction.sold && (
             <div className={styles.actionButtons}>
               <button className={styles.bidButton} onClick={handleOpenBid}>
@@ -373,8 +352,8 @@ function AuctionPage() {
           )}
         </div>
 
+        {/* Right Column */}
         <div className={styles.rightColumn}>
-          {/* Winner Section */}
           {auction.sold && auction.winner && (
             <div className={styles.winnerSection}>
               <h3 className={styles.winnerTitle}>Winner</h3>
@@ -410,7 +389,6 @@ function AuctionPage() {
             </div>
           )}
 
-          {/* Bids Table */}
           <div className={styles.bidTableContainer}>
             <h3>Bids</h3>
             <table className={styles.bidTable}>
@@ -422,7 +400,7 @@ function AuctionPage() {
                   {role === "seller" && (
                     <>
                       <th>location</th>
-                      <th>country </th>
+                      <th>country</th>
                     </>
                   )}
                 </tr>
@@ -451,69 +429,69 @@ function AuctionPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Map */}
-          {coords[0] !== 0 && coords[1] !== 0 && (
-            <div className={styles.mapWrapper}>
-              <MapContainer
-                center={coords}
-                zoom={13}
-                style={{ height: "400px", width: "100%" }}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Marker position={coords}>
-                  <Popup>
-                    {auction.latitude && auction.longitude
-                      ? `${auction.latitude}, ${auction.longitude}`
-                      : `${auction.location || ""}, ${auction.country || ""}`}
-                  </Popup>
-                </Marker>
-              </MapContainer>
-            </div>
-          )}
         </div>
 
-        {/* Bid Modal */}
-        {showBidModal && (
-          <div className={styles.modalOverlay}>
-            <div className={styles.modal}>
-              <h2>Place Your Bid on "{auction.name}"</h2>
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={`Current: $${
-                  auction.currently || auction.first_bid
-                }`}
-              />
-              {bidError && <p className={styles.bidError}>{bidError}</p>}
-              <div className={styles.modalButtons}>
-                <button onClick={handlePlaceBid}>Submit Bid</button>
-                <button onClick={handleCloseBid}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Message Modal */}
-        {showMessageModal && (
-          <div className={styles.modalOverlay}>
-            <div className={styles.modal}>
-              <h2>Send Message to {messageRecipient}</h2>
-              <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Type your message here..."
-                className={styles.textarea}
-              />
-              <div className={styles.modalButtons}>
-                <button onClick={handleSendMessage}>Send</button>
-                <button onClick={handleCloseMessageModal}>Cancel</button>
-              </div>
-            </div>
+        {/* Map full-width */}
+        {coords[0] !== 0 && coords[1] !== 0 && (
+          <div className={styles.mapWrapper}>
+            <MapContainer
+              center={coords}
+              zoom={13}
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <Marker position={coords}>
+                <Popup>
+                  {auction.latitude && auction.longitude
+                    ? `${auction.latitude}, ${auction.longitude}`
+                    : `${auction.location || ""}, ${auction.country || ""}`}
+                </Popup>
+              </Marker>
+            </MapContainer>
           </div>
         )}
       </div>
+
+      {/* Bid Modal */}
+      {showBidModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Place Your Bid on "{auction.name}"</h2>
+            <input
+              type="number"
+              value={bidAmount}
+              onChange={(e) => setBidAmount(e.target.value)}
+              placeholder={`Current: $${
+                auction.currently || auction.first_bid
+              }`}
+            />
+            {bidError && <p className={styles.bidError}>{bidError}</p>}
+            <div className={styles.modalButtons}>
+              <button onClick={handlePlaceBid}>Submit Bid</button>
+              <button onClick={handleCloseBid}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Modal */}
+      {showMessageModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Send Message to {messageRecipient}</h2>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type your message here..."
+              className={styles.textarea}
+            />
+            <div className={styles.modalButtons}>
+              <button onClick={handleSendMessage}>Send</button>
+              <button onClick={handleCloseMessageModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

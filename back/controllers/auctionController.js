@@ -763,27 +763,29 @@ exports.buyNow = (req, res) => {
 
 exports.getWonAuctions = async (req, res) => {
   try {
-    const userId = req.user?.id; // <-- matches the JWT payload
-    if (!userId)
-      return res.status(400).json({ message: "No user id in token" });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(400).json({ msg: "No user id in token" });
+    }
 
     const [rows] = await db.promise().query(
-      `SELECT i.*, u.username AS seller_name, b.bidder_id AS winner_id, b.amount AS final_price
-         FROM items i
-         JOIN bids b ON b.id = (
-             SELECT id FROM bids WHERE item_id = i.id ORDER BY amount DESC, time DESC LIMIT 1
-         )
-         JOIN users u ON i.seller_id = u.id
-         WHERE i.ends < NOW() AND b.bidder_id = ?`,
+      `SELECT 
+          i.id,
+          i.name,
+          i.ends,
+          i.currently AS final_price,
+          i.seller_id,
+          u.username AS seller_name
+       FROM items i
+       JOIN users u ON i.seller_id = u.id
+       WHERE i.winner_id = ? AND i.sold = 1`,
       [userId]
     );
 
     res.json(rows);
   } catch (err) {
     console.error("Error fetching won auctions:", err);
-    res
-      .status(500)
-      .json({ message: "Error fetching won auctions", error: err.message });
+    res.status(500).json({ msg: "Error fetching won auctions" });
   }
 };
 

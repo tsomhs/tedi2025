@@ -6,17 +6,16 @@
   background: linear-gradient(135deg, #86e7c2, #60e0bc);
   min-height: 100vh;
   width: 100vw;
-  padding: 2rem 5rem; /* small padding around page */
+  padding: 2rem 5rem;
   box-sizing: border-box;
 }
 
 .page {
   display: flex;
-  gap: 2rem; /* space between left card and right column */
+  gap: 2rem;
   width: 100%;
-
-  margin-top: 5rem;
-  box-sizing: border-box;
+  margin-top: 35rem;
+  flex-wrap: wrap; /* allow wrapping for map under */
 }
 
 .backArrow {
@@ -32,26 +31,27 @@
   color: #06e94a;
   transform: translateX(-3px);
 }
+
 .card {
   background-color: #d7eceb;
-  margin: 2rem;
+  margin: 1rem;
   padding: 2rem;
   border-radius: 20px;
-  max-width: 700px;
-  width: 100%;
-  max-height: 90vh; /* <-- limit height */
-  overflow-y: auto; /* <-- scroll if content exceeds */
+  flex: 2;
+  min-width: 350px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
-
 .card:hover {
-  transform: translateY(-7px);
+  transform: translateY(-5px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
 .title {
-  margin-bottom: 1.8rem;
+  margin-bottom: 1.5rem;
   color: #1a3d2d;
   text-align: center;
   font-size: 2rem;
@@ -66,7 +66,6 @@
 .infoSection:last-child {
   border-bottom: none;
 }
-
 .infoSection p {
   margin: 0.3rem 0;
   color: #1f3d2e;
@@ -86,9 +85,9 @@
 }
 
 .actionButtons {
-  width: 30%;
   display: flex;
   justify-content: space-around;
+  margin-top: 1rem;
 }
 
 .bidButton {
@@ -98,7 +97,6 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin-top: 1rem;
 }
 .bidButton:hover {
   background-color: #7b1fa2;
@@ -111,49 +109,45 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin-top: 1rem;
 }
 .buyButton:hover {
   background-color: #c94435;
 }
 
-/* Right Column (winner + bids + map) */
+/* Right Column */
 .rightColumn {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* spacing between winner, bids, map */
+  gap: 1.5rem;
   flex: 1;
-  margin-top: 2rem;
+  min-width: 300px;
+  margin: 1rem;
 }
 
 .winnerSection {
-  background-color: #f0f8ff; /* light blue */
+  background-color: #f0f8ff;
   padding: 1rem;
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
-
 .winnerSection:hover {
-  transform: translateY(-7px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
 }
-
 .winnerTitle {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
   color: #102a43;
 }
-
 .winnerName {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
   color: #0a0a0a;
 }
-
 .messageBuyerBtn {
   background-color: #06e94a;
   border: none;
@@ -178,24 +172,20 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
-
 .bidTableContainer:hover {
-  transform: translateY(-7px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
 }
-
 .bidTableContainer h3 {
   text-align: center;
   margin-bottom: 0.5rem;
   color: #007bff;
 }
-
 .bidTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
-
 .bidTable th {
   background-color: #007bff;
   color: #fff;
@@ -205,12 +195,10 @@
   top: 0;
   z-index: 1;
 }
-
 .bidTable td {
   padding: 0.5rem;
   border-bottom: 1px solid #ddd;
 }
-
 .bidTable tr:nth-child(even) {
   background-color: #e9f2ff;
 }
@@ -219,15 +207,18 @@
   font-weight: bold;
 }
 
-/* Map */
+/* Map full-width */
 .mapWrapper {
   width: 100%;
-  height: 300px;
+  height: 400px;
+  margin: 4rem auto 2rem; /* ⬅️ more top gap (4rem), bottom 2rem */
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  flex-basis: 100%;
 }
 
+/* Modals */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -240,7 +231,6 @@
   align-items: center;
   z-index: 1000;
 }
-
 .modal {
   background-color: white;
   padding: 2rem;
@@ -249,7 +239,6 @@
   width: 90%;
   text-align: center;
 }
-
 .modal input {
   width: 80%;
   padding: 8px;
@@ -257,7 +246,6 @@
   border-radius: 5px;
   border: 1px solid #ccc;
 }
-
 .modalButtons button {
   margin: 0 0.5rem;
   padding: 8px 14px;
