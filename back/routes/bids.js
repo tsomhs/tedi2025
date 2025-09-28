@@ -1,5 +1,3 @@
-// routes/bids.js
-
 const express = require("express");
 const router = express.Router();
 const bidController = require("../controllers/bidController");

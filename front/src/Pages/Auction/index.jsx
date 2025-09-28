@@ -43,7 +43,6 @@ function AuctionPage() {
     fetchUser();
   }, []);
 
-  // Send message
   const handleSendMessage = async () => {
     if (!messageText.trim()) {
       alert("Message cannot be empty!");
@@ -112,7 +111,6 @@ function AuctionPage() {
     fetchAuction();
   }, [id]);
 
-  // Fetch role
   useEffect(() => {
     const fetchRole = async () => {
       const res = await getUserRole();
@@ -295,7 +293,6 @@ function AuctionPage() {
         ←
       </span>
       <div className={styles.page}>
-        {/* Left Card */}
         <div className={styles.card}>
           <h1 className={styles.title}>{auction.name}</h1>
 
@@ -369,7 +366,6 @@ function AuctionPage() {
           )}
         </div>
 
-        {/* Right Column */}
         <div className={styles.rightColumn}>
           {auction.sold && auction.winner && (
             <div className={styles.winnerSection}>
@@ -448,7 +444,6 @@ function AuctionPage() {
           </div>
         </div>
 
-        {/* Map full-width */}
         {coords[0] !== 0 && coords[1] !== 0 && (
           <div className={styles.mapWrapper}>
             <MapContainer
@@ -469,7 +464,6 @@ function AuctionPage() {
         )}
       </div>
 
-      {/* Bid Modal */}
       {showBidModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
@@ -491,7 +485,6 @@ function AuctionPage() {
         </div>
       )}
 
-      {/* Message Modal */}
       {showMessageModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>

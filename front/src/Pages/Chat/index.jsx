@@ -21,7 +21,6 @@ function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Scroll on messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -66,7 +65,6 @@ function ChatPage() {
     loadChat();
   }, [currentChatId]);
 
-  // Helper: find other participant’s user id
   const getOtherUserId = () => {
     if (!userId || !messages.length) return null;
     const msg = messages[0]; // first message is enough
@@ -82,8 +80,6 @@ function ChatPage() {
 
       try {
         const userData = await getUserById(otherUserId);
-        // Adjust depending on your API response structure:
-        // e.g., userData.username OR userData.user.username
         setOtherUserName(
           userData.username || userData.user?.username || "Unknown"
         );
@@ -126,7 +122,6 @@ function ChatPage() {
     }
   };
 
-  // Delete a message
   const handleDelete = async (messageId) => {
     try {
       const token = localStorage.getItem("token");

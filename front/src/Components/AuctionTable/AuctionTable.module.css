@@ -13,7 +13,7 @@
 .auctionTable th,
 .auctionTable td {
   padding: 15px 12px;
-  text-align: center; /* center all content */
+  text-align: center;
 }
 
 .auctionTable th {
@@ -23,7 +23,7 @@
 }
 
 .auctionTable tbody tr:nth-child(even) {
-  background-color: #d7f5e4; /* alternate row color */
+  background-color: #d7f5e4;
 }
 
 .auctionTable td {

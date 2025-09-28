@@ -68,12 +68,12 @@ function AuctionsBought() {
 
       const sentMessage = res.data.message;
 
-      // ✅ Close modal and reset
+      //  Close modal and reset
       setShowMessageModal(false);
       setMessageText("");
       setMessageRecipient(null);
 
-      // ✅ Redirect into chat with this seller
+      //  Redirect into chat with this seller
       navigate(`/chat/${sentMessage.chat_id}`);
     } catch (err) {
       console.error("Error sending message:", err);
@@ -146,7 +146,6 @@ function AuctionsBought() {
         </table>
       </div>
 
-      {/* Message Modal */}
       {showMessageModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>

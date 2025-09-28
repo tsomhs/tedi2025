@@ -1,11 +1,11 @@
 .container {
   min-height: 100vh;
   display: flex;
-  flex-direction: column; /* stack children vertically */
-  justify-content: flex-start; /* push content to the top */
-  align-items: center; /* keep centered horizontally */
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
   background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
-  padding: 4rem 2rem 2rem; /* top padding to separate from edge */
+  padding: 4rem 2rem 2rem;
   position: relative;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -29,7 +29,7 @@
   margin-top: 10rem;
   max-width: 800px;
   text-align: center;
-  margin-bottom: 2rem; /* space before recsGrid */
+  margin-bottom: 2rem;
 }
 
 .title {
@@ -97,7 +97,7 @@
   color: #022912;
   margin-top: 2rem;
   margin-bottom: 1.5rem;
-  text-align: center; /* center title */
+  text-align: center;
   border-bottom: 2px solid #00a86b;
   display: inline-block;
   padding-bottom: 0.3rem;
@@ -108,8 +108,8 @@
   flex-direction: column;
   justify-self: center;
   gap: 1.2rem;
-  width: 100%; /* full width */
-  max-width: 600px; /* keep it readable */
+  width: 100%;
+  max-width: 600px;
   max-height: 55vh;
   margin-top: 2rem;
   margin-bottom: 3rem;
@@ -122,7 +122,7 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.3s ease;
-  border-left: 5px solid #00a86b; /* accent */
+  border-left: 5px solid #00a86b;
 }
 
 .recCard:hover {

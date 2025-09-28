@@ -1,5 +1,3 @@
-// controllers/auctionController.js
-
 const db = require("../config/db");
 
 const safeFloat = (value) => {
@@ -22,7 +20,6 @@ const formatDateForMySQL = (dt) => {
   return clean;
 };
 
-// --- Create Auction ---
 exports.createAuction = (req, res) => {
   const { id: userId, role } = req.user || {};
   if (role !== "seller")
@@ -104,7 +101,6 @@ exports.createAuction = (req, res) => {
   );
 };
 
-// --- Update Auction ---
 exports.updateAuction = (req, res) => {
   const { id: userId, role } = req.user || {};
   if (role !== "seller")
@@ -224,7 +220,6 @@ exports.getAuctionById = (req, res) => {
 
         item.categories = categories.map((c) => c.category_name);
 
-        // ends is already string (because of dateStrings:true), safe for compare
         const now = new Date();
         const endsDate = new Date(item.ends);
         item.sold = endsDate <= now;

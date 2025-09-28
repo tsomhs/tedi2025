@@ -1,34 +1,38 @@
-// scripts/parseEbayData.js
 // Διαβάζει τα items-*.xml του ebay-data και γεμίζει MySQL: users, items, item_categories, bids
 // Χρήση: node scripts/parseEbayData.js data/ebay-data
 
-const db = require('../config/db');
-const fs = require('fs');
-const path = require('path');
-const xml2js = require('xml2js');
+const db = require("../config/db");
+const fs = require("fs");
+const path = require("path");
+const xml2js = require("xml2js");
 
-const DATA_DIR = process.argv[2] || './ebay-data';
+const DATA_DIR = process.argv[2] || "./ebay-data";
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
-function moneyToNum(s) { return Number(String(s || '0').replace(/[$,]/g, '')); }
-function ts(s) { return new Date(s); }
+function moneyToNum(s) {
+  return Number(String(s || "0").replace(/[$,]/g, ""));
+}
+function ts(s) {
+  return new Date(s);
+}
 
 async function main() {
   const conn = db.promise();
-  console.log('MySQL connected!');
+  console.log("MySQL connected!");
 
-  const files = fs.readdirSync(DATA_DIR)
-    .filter(f => /^items-\d+\.xml$/i.test(f))
-    .map(f => path.join(DATA_DIR, f));
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((f) => /^items-\d+\.xml$/i.test(f))
+    .map((f) => path.join(DATA_DIR, f));
 
   // === helpers (UPSERTs) ===
   async function upsertUser(username, role) {
     if (!username) return null;
     // Χαρτογράφηση ρόλων στο enum του schema
-    const safeRole = role === 'seller' ? 'seller' : 'buyer'; // οι bidders -> buyer
+    const safeRole = role === "seller" ? "seller" : "buyer"; // οι bidders -> buyer
 
     const email = `${username}@ebay.local`; // UNIQUE & NOT NULL
-    const password = 'imported'; // απλό placeholder
+    const password = "imported"; // απλό placeholder
 
     await conn.execute(
       `INSERT INTO users (username, email, password, role, approved)
@@ -37,7 +41,9 @@ async function main() {
       [username, email, password, safeRole]
     );
 
-    const [rows] = await conn.execute(`SELECT id FROM users WHERE username=?`, [username]);
+    const [rows] = await conn.execute(`SELECT id FROM users WHERE username=?`, [
+      username,
+    ]);
     return rows[0]?.id || null;
   }
 
@@ -50,9 +56,18 @@ async function main() {
        )
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        it.name, it.first_bid, it.currently, it.buy_price,
-        it.latitude, it.longitude, it.location, it.country,
-        it.started, it.ends, it.seller_id, it.description
+        it.name,
+        it.first_bid,
+        it.currently,
+        it.buy_price,
+        it.latitude,
+        it.longitude,
+        it.location,
+        it.country,
+        it.started,
+        it.ends,
+        it.seller_id,
+        it.description,
       ]
     );
     return res.insertId;
@@ -75,8 +90,8 @@ async function main() {
   }
 
   for (const file of files) {
-    console.log('Parsing:', file);
-    const xml = fs.readFileSync(file, 'utf8');
+    console.log("Parsing:", file);
+    const xml = fs.readFileSync(file, "utf8");
     const json = await parser.parseStringPromise(xml);
 
     let items = json.Items?.Item || [];
@@ -85,15 +100,19 @@ async function main() {
     for (const I of items) {
       // ---- seller ----
       const sellerUsername = I.Seller?.UserID || null;
-      const sellerId = await upsertUser(sellerUsername, 'seller');
+      const sellerId = await upsertUser(sellerUsername, "seller");
 
       // ---- item fields ----
-      const name = I.Name ?? '';
-      const description = I.Description ?? '';
+      const name = I.Name ?? "";
+      const description = I.Description ?? "";
       const location = I.Location ?? null;
       const country = I.Country ?? null;
-      const latitude = I.Location?.Latitude ? Number(I.Location.Latitude) : null;
-      const longitude = I.Location?.Longitude ? Number(I.Location.Longitude) : null;
+      const latitude = I.Location?.Latitude
+        ? Number(I.Location.Latitude)
+        : null;
+      const longitude = I.Location?.Longitude
+        ? Number(I.Location.Longitude)
+        : null;
 
       const started = ts(I.Started);
       const ends = ts(I.Ends);
@@ -103,23 +122,34 @@ async function main() {
       const buy_price = I.Buy_Price ? moneyToNum(I.Buy_Price) : null;
 
       const itemId = await insertItem({
-        name, first_bid, currently, buy_price,
-        latitude, longitude, location, country,
-        started, ends, seller_id: sellerId, description
+        name,
+        first_bid,
+        currently,
+        buy_price,
+        latitude,
+        longitude,
+        location,
+        country,
+        started,
+        ends,
+        seller_id: sellerId,
+        description,
       });
 
       // ---- categories ----
       const cats = I.Category
-        ? (Array.isArray(I.Category) ? I.Category : [I.Category])
+        ? Array.isArray(I.Category)
+          ? I.Category
+          : [I.Category]
         : [];
       for (const c of cats) await addCategory(itemId, c);
 
       // ---- bids ----
       const B = I.Bids?.Bid || [];
-      const bids = Array.isArray(B) ? B : (B ? [B] : []);
+      const bids = Array.isArray(B) ? B : B ? [B] : [];
       for (const b of bids) {
         const bidderUsername = b.Bidder?.UserID || null;
-        const bidderId = await upsertUser(bidderUsername, 'buyer'); // ΟΧΙ 'bidder'
+        const bidderId = await upsertUser(bidderUsername, "buyer"); // ΟΧΙ 'bidder'
         const time = ts(b.Time);
         const amount = moneyToNum(b.Amount);
         await addBid(itemId, bidderId, time, amount);
@@ -127,8 +157,11 @@ async function main() {
     }
   }
 
-  console.log('Import finished.');
+  console.log("Import finished.");
   process.exit(0);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -1,5 +1,3 @@
-// controllers/bidController.js
-
 const db = require("../config/db");
 
 exports.placeBid = (req, res) => {

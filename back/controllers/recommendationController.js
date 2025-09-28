@@ -1,11 +1,5 @@
-// controllers/recommendationController.js
-//
-// Matrix Factorization (implicit) με SGD.
 // Χρησιμοποιεί bids (βάρος 1.0) + view_history (βάρος 0.3).
 // Cold-start: δημοφιλή με βάση bids + view_history.
-//
-// Απαιτεί tables: users, items, bids, view_history.
-// Συμβατό με ρόλους: 'admin' / 'seller' / 'bidder' / 'visitor'.
 
 const db = require("../config/db");
 
@@ -175,7 +169,6 @@ function fetchItemsByIds(ids) {
     db.query(q, ids, async (err, rows) => {
       if (err) return reject(err);
 
-      // ✅ also fetch categories
       const results = await Promise.all(
         rows.map(async (item) => {
           return new Promise((res, rej) => {

@@ -1,11 +1,11 @@
 .container {
   background-color: #b9b8b8;
-  min-height: 100vh; /* instead of fixed height */
+  min-height: 100vh;
   min-width: 100vw;
   padding: 2rem;
   box-sizing: border-box;
-  overflow-x: hidden; /* keep horizontal hidden */
-  overflow-y: auto; /* allow vertical scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   font-weight: bold;
@@ -230,10 +230,6 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-
-/* =======================
-   Pagination
-======================= */
 .pagination {
   margin-top: 15px;
   display: flex;

@@ -12,26 +12,26 @@
 }
 .header {
   display: flex;
-  justify-content: space-between; /* left content vs right button */
+  justify-content: space-between;
   align-items: center;
   margin-top: 2rem;
-  padding: 0 1rem; /* optional horizontal padding */
+  padding: 0 1rem;
 }
 
 .leftHeader {
   display: flex;
-  align-items: center; /* centers arrow & text vertically */
-  gap: 10px; /* space between arrow and title */
+  align-items: center;
+  gap: 10px;
 }
 
 .leftHeader h1 {
   margin: 0;
-  line-height: 1; /* ensures vertical center */
-  font-size: 2rem; /* adjust to match arrow visually */
+  line-height: 1;
+  font-size: 2rem;
 }
 
 .backArrow {
-  font-size: 2.5rem; /* adjust as needed */
+  font-size: 2.5rem;
   color: #0a0a0a;
   cursor: pointer;
   align-items: center;
@@ -43,7 +43,6 @@
   transform: translateX(-3px);
 }
 
-/* Auction table styling */
 .auctionTable {
   width: 100%;
   border-collapse: collapse;
@@ -59,7 +58,7 @@
 .auctionTable th,
 .auctionTable td {
   padding: 10px 12px;
-  text-align: center; /* center all content */
+  text-align: center;
 }
 
 .auctionTable th {
@@ -69,7 +68,7 @@
 }
 
 .auctionTable tbody tr:nth-child(even) {
-  background-color: #d7f5e4; /* alternate row color */
+  background-color: #d7f5e4;
 }
 
 .auctionTable td {
@@ -118,7 +117,6 @@
   background-color: #f57c00;
 }
 
-/* Responsive for mobile */
 @media (max-width: 768px) {
   .auctionTable th,
   .auctionTable td {
@@ -237,12 +235,11 @@
 .actions .buy:hover {
   background-color: #c0392b;
 }
-/* Filters container - horizontal toolbar */
 .filterContainer {
   display: flex;
-  flex-wrap: wrap; /* wrap to next line on small screens */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem; /* vertical & horizontal spacing */
+  gap: 0.75rem 1rem;
   font-weight: bold;
   font-size: 1rem;
   background-color: #f9f9f9;
@@ -251,13 +248,11 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Labels styling */
 .filterContainer label {
   font-weight: bold;
   margin-right: 0.25rem;
 }
 
-/* Inputs and selects */
 .filterContainer select,
 .filterContainer input {
   padding: 6px 12px;
@@ -270,14 +265,12 @@
   min-width: 100px;
 }
 
-/* Hover effect */
 .filterContainer select:hover,
 .filterContainer input:hover {
   border-color: #2196f3;
   background-color: #e0f0ff;
 }
 
-/* Focus effect */
 .filterContainer select:focus,
 .filterContainer input:focus {
   outline: none;
@@ -285,13 +278,11 @@
   background-color: #e0f0ff;
 }
 
-/* Placeholder styling */
 .filterContainer input::placeholder {
   font-weight: normal;
   color: #888;
 }
 
-/* Responsive tweak: make inputs full width on small screens */
 @media (max-width: 600px) {
   .filterContainer {
     gap: 0.5rem 0.5rem;
@@ -299,12 +290,11 @@
 
   .filterContainer select,
   .filterContainer input {
-    flex: 1 1 100%; /* full width on small screens */
+    flex: 1 1 100%;
     min-width: auto;
   }
 }
 
-/* Pagination buttons */
 .pagination button {
   padding: 6px 12px;
   border-radius: 5px;
@@ -326,12 +316,10 @@
   color: #999;
 }
 
-/* Current page indicator */
 .pagination span {
   font-weight: bold;
   font-size: 1rem;
 }
-/* Header container */
 .headerContent {
   display: flex;
   justify-content: space-between;
@@ -339,7 +327,6 @@
   width: 100%;
 }
 
-/* My Auctions button */
 .myAuctionsBtn {
   padding: 6px 12px;
   border-radius: 5px;
@@ -398,14 +385,14 @@
 }
 
 .tableWrapper {
-  flex: 1; /* allow table to take available space */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 70vh; /* ensures a steady block */
+  min-height: 70vh;
 }
 
 .auctionTable {
-  flex: 1; /* table grows */
+  flex: 1;
 }
 
 .pagination {
@@ -420,6 +407,6 @@
 }
 
 .emptyRow {
-  height: 40px; /* adjust as needed */
-  background-color: #f9f9f9; /* optional */
+  height: 40px;
+  background-color: #f9f9f9;
 }

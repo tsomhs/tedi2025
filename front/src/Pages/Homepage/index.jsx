@@ -22,7 +22,7 @@ function Homepage() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setRecs(res.data.items || []); // ✅ fixed
+        setRecs(res.data.items || []); //  fixed
         console.log(res.data);
       } catch (err) {
         console.error("Error fetching recommendations:", err);
@@ -99,7 +99,6 @@ function Homepage() {
           something extraordinary.
         </h2>
 
-        {/* Role Selection Buttons */}
         <div className={styles.buttonGroup}>
           <button
             className={styles.button}

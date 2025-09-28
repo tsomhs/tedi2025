@@ -22,7 +22,7 @@ function BrowseAuctions() {
     completed: 0,
   });
   const [orderBy, setOrderBy] = useState("id"); // Default order by id
-  const [orderDir, setOrderDir] = useState("DESC"); // Default descending
+  const [orderDir, setOrderDir] = useState("DESC");
 
   const [role, setRole] = useState("");
   const [tab, setTab] = useState("active");
@@ -35,7 +35,7 @@ function BrowseAuctions() {
 
   const [loading, setLoading] = useState(true);
 
-  // Filters (optional – right now applied client-side)
+  // Filters
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState("");
@@ -88,7 +88,6 @@ function BrowseAuctions() {
     const pages = getPageNumbers(currentPage[tab], totalPages[tab], 5);
     const buttons = [];
 
-    // Prev button
     buttons.push(
       <button
         key="prev"
@@ -99,7 +98,6 @@ function BrowseAuctions() {
       </button>
     );
 
-    // Leading ellipsis if needed
     if (pages[0] > 1) {
       buttons.push(
         <button key={1} onClick={() => fetchAuctions(tab, 1)}>
@@ -122,7 +120,6 @@ function BrowseAuctions() {
       );
     });
 
-    // Trailing ellipsis if needed
     if (pages[pages.length - 1] < totalPages[tab]) {
       if (pages[pages.length - 1] < totalPages[tab] - 1)
         buttons.push(<span key="end-ellipsis">...</span>);
@@ -136,7 +133,6 @@ function BrowseAuctions() {
       );
     }
 
-    // Next button
     buttons.push(
       <button
         key="next"
@@ -192,17 +188,15 @@ function BrowseAuctions() {
 
   const handleSort = (column) => {
     if (orderBy === column) {
-      // Toggle direction
       setOrderDir((prev) => (prev === "ASC" ? "DESC" : "ASC"));
     } else {
       setOrderBy(column);
-      setOrderDir("ASC"); // Default new column to ascending
+      setOrderDir("ASC");
     }
     // Refetch with new sorting
     fetchAuctions(tab, currentPage[tab]);
   };
 
-  // Bid modal handlers
   const handleOpenBid = (auction) => {
     setBidError("");
     setCurrentAuction(auction);
@@ -307,7 +301,6 @@ function BrowseAuctions() {
         </div>
       </div>
 
-      {/* Tabs with counts */}
       <div className={styles.tabContainer}>
         <button
           className={`${styles.tabButton} ${
@@ -333,7 +326,6 @@ function BrowseAuctions() {
         <p>No auctions</p>
       ) : (
         <>
-          {/* Filters */}
           <div className={styles.filterContainer}>
             <label>Category:</label>
             <input
@@ -373,7 +365,6 @@ function BrowseAuctions() {
               onChange={(e) => setLocationSearch(e.target.value)}
             />
 
-            {/* Apply Filters Button */}
             <button
               onClick={() => {
                 // Always start from page 1 when applying new filters
@@ -384,7 +375,6 @@ function BrowseAuctions() {
             </button>
           </div>
 
-          {/* Auction Table */}
           <table className={styles.auctionTable}>
             <thead>
               <tr>
@@ -449,7 +439,6 @@ function BrowseAuctions() {
                 </tr>
               ))}
 
-              {/* Add empty rows to fill table */}
               {Array.from({ length: PAGE_LIMIT - auctions.length }).map(
                 (_, idx) => (
                   <tr key={`empty-${idx}`} className={styles.emptyRow}>
@@ -460,12 +449,10 @@ function BrowseAuctions() {
             </tbody>
           </table>
 
-          {/* Pagination */}
           <div className={styles.pagination}>{renderPagination()}</div>
         </>
       )}
 
-      {/* Bid Modal */}
       {showBidModal && currentAuction && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>

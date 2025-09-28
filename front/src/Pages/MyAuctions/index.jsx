@@ -22,7 +22,7 @@ function MyAuctions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [newAuction, setNewAuction] = useState(getEmptyAuction());
 
-  /** ----------- Helpers ----------- **/
+  //Helpers
 
   function getLocalDateTime(date = new Date()) {
     const offset = date.getTimezoneOffset();
@@ -60,7 +60,7 @@ function MyAuctions() {
     setTimeout(() => setNotification({ message: "", type: "" }), 3000);
   };
 
-  /** ----------- Fetch Auctions ----------- **/
+  // Fetch Auctions
   const fetchAuctions = async () => {
     try {
       const data = await getMyAuctions();
@@ -96,7 +96,7 @@ function MyAuctions() {
     fetchAuctions();
   }, []);
 
-  /** ----------- Handlers ----------- **/
+  // Handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewAuction((prev) => ({ ...prev, [name]: value }));
@@ -264,7 +264,7 @@ function MyAuctions() {
     }
   };
 
-  /** ----------- UI ----------- **/
+  // UI
   const filteredAuctions = auctions.filter((a) => {
     const startDate = new Date(a.starts);
     const endDate = new Date(a.ends);

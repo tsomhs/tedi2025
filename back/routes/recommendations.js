@@ -1,13 +1,12 @@
-// routes/recommendations.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
-const recommendationController = require('../controllers/recommendationController');
+const { verifyToken } = require("../middleware/authMiddleware");
+const recommendationController = require("../controllers/recommendationController");
 
 // Πάρε top-N προτάσεις για τον current user
-router.get('/top', verifyToken, recommendationController.getTopRecommendations);
+router.get("/top", verifyToken, recommendationController.getTopRecommendations);
 
 //Log επίσκεψης item (implicit feedback)
-router.post('/visit/:itemId', verifyToken, recommendationController.logVisit);
+router.post("/visit/:itemId", verifyToken, recommendationController.logVisit);
 
 module.exports = router;
